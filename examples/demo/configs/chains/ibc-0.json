@@ -1,18 +1,9 @@
 {
-  "type": "cosmos",
+  "type": "avalanche",
   "value": {
     "key": "testkey",
     "chain-id": "ibc-0",
-    "rpc-addr": "http://localhost:26657",
-    "grpc-addr": "",
-    "account-prefix": "cosmos",
-    "keyring-backend": "test",
-    "gas-adjustment": 1.5,
-    "gas-prices": "0.025stake",
-    "debug": true,
-    "timeout": "10s",
-    "output-format": "json",
-    "sign-mode": "direct"
+    "rpc-addr": "http://127.0.0.1:9650/ext/bc/yWk9paR5DkEWMpY1q4HittnSRQT1pZhcmsjwwXGKucHxUz6je/rpc",
+    "timeout": "10s"
   }
 }
-

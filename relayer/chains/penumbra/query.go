@@ -27,9 +27,10 @@ import (
 	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 var _ provider.QueryProvider = &PenumbraProvider{}
