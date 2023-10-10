@@ -229,6 +229,7 @@ require (
 
 //replace github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm v0.0.0-20230822121305-753702f5b36a
 replace github.com/ava-labs/subnet-evm => /srv/strangelove/cidt-subnet-evm
+replace github.com/cosmos/ibc-go/v7 => /srv/strangelove/ibc-go
 
 //replace (
 //	source latest => target latest
