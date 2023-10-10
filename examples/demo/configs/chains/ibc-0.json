@@ -4,6 +4,7 @@
     "key": "testkey",
     "chain-id": "ibc-0",
     "rpc-addr": "http://127.0.0.1:9650/ext/bc/yWk9paR5DkEWMpY1q4HittnSRQT1pZhcmsjwwXGKucHxUz6je/rpc",
+    "contract-address": "0x0300000000000000000000000000000000000002",
     "timeout": "10s"
   }
 }
