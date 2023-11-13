@@ -2,8 +2,8 @@ package avalanche
 
 import (
 	"context"
+	"io"
 	"math/big"
-	"net/url"
 	"strings"
 	"time"
 
@@ -11,6 +11,7 @@ import (
 	"github.com/ava-labs/subnet-evm/rpc"
 	"github.com/ava-labs/subnet-evm/tests/precompile/contract"
 	"github.com/avast/retry-go/v4"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
@@ -23,9 +24,8 @@ import (
 )
 
 var (
-	_ provider.ChainProvider  = &AvalancheProvider{}
-	_ provider.KeyProvider    = &AvalancheProvider{}
-	_ provider.ProviderConfig = &AvalancheProviderConfig{}
+	_ provider.ChainProvider = &AvalancheProvider{}
+	_ provider.KeyProvider   = &AvalancheProvider{}
 
 	tempKey, _ = crypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
 )
@@ -38,43 +38,15 @@ var (
 	rtyErr    = retry.LastErrorOnly(true)
 )
 
-type AvalancheProviderConfig struct {
-	RPCAddr         string `json:"rpc-addr" yaml:"rpc-addr"`
-	ChainID         string `json:"chain-id" yaml:"chain-id"`
-	ChainName       string `json:"-" yaml:"-"`
-	Timeout         string `json:"timeout" yaml:"timeout"`
-	ContractAddress string `json:"contract-address" yaml:"contract-address"`
-}
-
-func (ac AvalancheProviderConfig) NewProvider(log *zap.Logger, homepath string, debug bool, chainName string) (provider.ChainProvider, error) {
-	if err := ac.Validate(); err != nil {
-		return nil, err
-	}
-	ac.ChainName = chainName
-
-	return &AvalancheProvider{
-		log:  log,
-		PCfg: ac,
-	}, nil
-}
-
-func (ac AvalancheProviderConfig) Validate() error {
-	_, err := url.Parse(ac.RPCAddr)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ac AvalancheProviderConfig) BroadcastMode() provider.BroadcastMode {
-	return provider.BroadcastModeSingle
-}
-
 type AvalancheProvider struct {
 	log *zap.Logger
 
-	PCfg AvalancheProviderConfig
+	PCfg           AvalancheProviderConfig
+	Keybase        keyring.Keyring
+	KeyringOptions []keyring.Option
+	Input          io.Reader
+	Output         io.Writer
+	Codec          Codec
 
 	ethClient    ethclient.Client
 	subnetClient *subnetevmclient.Client
@@ -94,14 +66,23 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 
 	a.txAuth, err = bind.NewKeyedTransactorWithChainID(tempKey, chainId)
 
-	a.abi, err = abi.JSON(strings.NewReader(contract.ContractMetaData.ABI))
+	keybase, err := keyring.New(a.PCfg.ChainID, a.PCfg.KeyringBackend, a.PCfg.KeyDirectory, a.Input, a.Codec.Marshaler, a.KeyringOptions...)
+
+	abi, err := abi.JSON(strings.NewReader(contract.ContractMetaData.ABI))
 	if err != nil {
 		return err
 	}
 
+	a.Keybase = keybase
+	a.abi = abi
+
 	return nil
 }
 
-func (a AvalancheProvider) Sprint(toPrint proto.Message) (string, error) {
-	return toPrint.String(), nil
+func (a *AvalancheProvider) Sprint(toPrint proto.Message) (string, error) {
+	out, err := a.Codec.Marshaler.MarshalJSON(toPrint)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
