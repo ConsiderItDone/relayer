@@ -13,6 +13,7 @@ import (
 	"github.com/ava-labs/subnet-evm/interfaces"
 	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	"github.com/avast/retry-go/v4"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
@@ -20,6 +21,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	avaclient "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
@@ -625,4 +627,167 @@ func (a AvalancheProvider) BlockTime(ctx context.Context, height int64) (time.Ti
 	}
 
 	return time.Unix(int64(block.Time()), 0), nil
+}
+
+func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgConnectionOpenConfirm(msgOpenAck provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgSubmitMisbehaviour(clientID string, misbehaviour ibcexported.ClientMessage) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) ValidatePacket(msgTransfer provider.PacketInfo, latestBlock provider.LatestBlock) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) PacketCommitment(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) PacketAcknowledgement(ctx context.Context, msgRecvPacket provider.PacketInfo, height uint64) (provider.PacketProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) PacketReceipt(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) NextSeqRecv(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info provider.PacketInfo) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgRecvPacket(msgTransfer provider.PacketInfo, proof provider.PacketProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgAcknowledgement(msgRecvPacket provider.PacketInfo, proofAcked provider.PacketProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgTimeout(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgTimeoutOnClose(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) CommitmentPrefix() commitmenttypes.MerklePrefix {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) ConnectionHandshakeProof(ctx context.Context, msgOpenInit provider.ConnectionInfo, height uint64) (provider.ConnectionProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) ConnectionProof(ctx context.Context, msgOpenAck provider.ConnectionInfo, height uint64) (provider.ConnectionProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) ChannelProof(ctx context.Context, msg provider.ChannelInfo, height uint64) (provider.ChannelProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader, trustedHeight clienttypes.Height, trustedHeader provider.IBCHeader) (ibcexported.ClientMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) QueryICQWithProof(ctx context.Context, msgType string, request []byte, height uint64) (provider.ICQProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgSubmitQueryResponse(chainID string, queryID provider.ClientICQQueryID, proof provider.ICQProof) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) RelayPacketFromSequence(ctx context.Context, src provider.ChainProvider, srch, dsth, seq uint64, srcChanID, srcPortID string, order chantypes.Order) (provider.RelayerMessage, provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) AcknowledgementFromSequence(ctx context.Context, dst provider.ChainProvider, dsth, seq uint64, dstChanID, dstPortID, srcChanID, srcPortID string) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) MsgRegisterCounterpartyPayee(portID, channelID, relayerAddr, counterpartyPayeeAddr string) (provider.RelayerMessage, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) ChainName() string {
+	return a.PCfg.ChainName
+}
+
+func (a AvalancheProvider) ChainId() string {
+	return a.PCfg.ChainID
+}
+
+func (a AvalancheProvider) Type() string {
+	return "avalanche"
+}
+
+func (a AvalancheProvider) ProviderConfig() provider.ProviderConfig {
+	return a.PCfg
+}
+
+// TODO: use json-file as a key storage.
+func (a AvalancheProvider) Key() string {
+	return "someKey"
+}
+
+// TODO: use json-file as a key storage.
+// See https://github.com/ethereum/go-ethereum/blob/bc6d184872889224480cf9df58b0539b210ffa9e/cmd/ethkey/inspect.go#L61
+func (a AvalancheProvider) Address() (string, error) {
+	keyAddr := crypto.PubkeyToAddress(tempKey.PublicKey)
+
+	return keyAddr.Hex(), nil
+}
+
+func (a AvalancheProvider) Timeout() string {
+	return a.PCfg.Timeout
+}
+
+func (a AvalancheProvider) TrustingPeriod(ctx context.Context) (time.Duration, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) WaitForNBlocks(ctx context.Context, n int64) error {
+	//TODO implement me
+	panic("implement me")
 }
