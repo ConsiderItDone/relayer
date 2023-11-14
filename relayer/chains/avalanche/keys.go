@@ -2,8 +2,10 @@ package avalanche
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
+	"github.com/cometbft/cometbft/libs/bytes"
 	ckeys "github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -15,6 +17,26 @@ import (
 )
 
 const ethereumCoinType = uint32(60)
+
+var (
+	// SupportedAlgorithms defines the list of signing algorithms used on Evmos:
+	//  - secp256k1     (Cosmos)
+	//  - eth_secp256k1 (Ethereum)
+	SupportedAlgorithms = keyring.SigningAlgoList{ethermint.EthSecp256k1}
+	// SupportedAlgorithmsLedger defines the list of signing algorithms used on Evmos for the Ledger device:
+	//  - secp256k1     (Cosmos)
+	//  - eth_secp256k1 (Ethereum)
+	SupportedAlgorithmsLedger = keyring.SigningAlgoList{ethermint.EthSecp256k1}
+)
+
+// KeyringAlgoOptions defines a function keys options for the ethereum Secp256k1 curve.
+// It supports secp256k1 and eth_secp256k1 keys for accounts.
+func KeyringAlgoOptions() keyring.Option {
+	return func(options *keyring.Options) {
+		options.SupportedAlgos = SupportedAlgorithms
+		options.SupportedAlgosLedger = SupportedAlgorithmsLedger
+	}
+}
 
 // CreateKeystore initializes a new instance of a keyring at the specified path in the local filesystem.
 func (a *AvalancheProvider) CreateKeystore(_ string) error {
@@ -39,7 +61,7 @@ func (a *AvalancheProvider) KeystoreCreated(_ string) bool {
 // AddKey generates a new mnemonic which is then converted to a private key and BIP-39 HD Path and persists it to the keystore.
 // It fails if there is an existing key with the same address.
 func (a *AvalancheProvider) AddKey(name string, coinType uint32, signingAlgorithm string) (output *provider.KeyOutput, err error) {
-	ko, err := cc.KeyAddOrRestore(name, coinType)
+	ko, err := a.KeyAddOrRestore(name, coinType)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +107,8 @@ func (a *AvalancheProvider) KeyAddOrRestore(keyName string, coinType uint32, mne
 	if err != nil {
 		return nil, err
 	}
+	out := a.EncodeAccAddr(acc)
 
-	out, err := a.EncodeBech32AccAddr(acc)
-	if err != nil {
-		return nil, err
-	}
 	return &provider.KeyOutput{Mnemonic: mnemonicStr, Address: out}, nil
 }
 
@@ -103,10 +122,8 @@ func (a *AvalancheProvider) ShowAddress(name string) (address string, err error)
 	if err != nil {
 		return "", nil
 	}
-	out, err := a.EncodeBech32AccAddr(acc)
-	if err != nil {
-		return "", err
-	}
+	out := a.EncodeAccAddr(acc)
+
 	return out, nil
 }
 
@@ -122,10 +139,8 @@ func (a *AvalancheProvider) ListAddresses() (map[string]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		addr, err := a.EncodeBech32AccAddr(acc)
-		if err != nil {
-			return nil, err
-		}
+		addr := a.EncodeAccAddr(acc)
+
 		out[k.Name] = addr
 	}
 	return out, nil
@@ -168,9 +183,8 @@ func CreateMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-// EncodeBech32AccAddr returns the string bech32 representation for the specified account address.
-// It returns an empty sting if the byte slice is 0-length.
-// It returns an error if the bech32 conversion fails or the prefix is empty.
-func (a *AvalancheProvider) EncodeBech32AccAddr(addr sdk.AccAddress) (string, error) {
-	return sdk.Bech32ifyAddressBytes(a.PCfg.AccountPrefix, addr)
+func (a *AvalancheProvider) EncodeAccAddr(addr sdk.AccAddress) string {
+	var data bytes.HexBytes = addr.Bytes()
+
+	return fmt.Sprintf("0x%s", data.String())
 }
