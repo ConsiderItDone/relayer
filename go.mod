@@ -210,10 +210,7 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-//replace github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm v0.0.0-20230822121305-753702f5b36a
-replace github.com/ava-labs/subnet-evm => /srv/strangelove/cidt-subnet-evm
-replace github.com/cosmos/ibc-go/v7 => /srv/strangelove/ibc-go
-
-//replace (
-//	source latest => target latest
-//)
+replace github.com/ava-labs/subnet-evm => github.com/consideritdone/subnet-evm v0.0.0-20231114023013-b240d9532edc
+//replace github.com/ava-labs/subnet-evm => /srv/strangelove/cidt-subnet-evm
+//replace github.com/cosmos/ibc-go/v7 => /srv/strangelove/ibc-go
+replace github.com/cosmos/ibc-go/v7 => github.com/ConsiderItDone/ibc-go-strangelove/v7 v7.0.0-20231114031343-75d3fc9db51a
