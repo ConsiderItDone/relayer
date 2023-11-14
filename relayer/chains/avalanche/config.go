@@ -3,6 +3,7 @@ package avalanche
 import (
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -25,6 +26,7 @@ type AvalancheProviderConfig struct {
 	KeyringBackend  string                  `json:"keyring-backend" yaml:"keyring-backend"`
 	ExtraCodecs     []string                `json:"extra-codecs" yaml:"extra-codecs"`
 	Modules         []module.AppModuleBasic `json:"-" yaml:"-"`
+	MinLoopDuration time.Duration           `json:"min-loop-duration" yaml:"min-loop-duration"`
 }
 
 func (ac AvalancheProviderConfig) NewProvider(log *zap.Logger, homepath string, debug bool, chainName string) (provider.ChainProvider, error) {

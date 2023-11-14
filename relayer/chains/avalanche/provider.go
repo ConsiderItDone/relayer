@@ -2,6 +2,7 @@ package avalanche
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"math/big"
 	"strings"
@@ -77,6 +78,91 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	a.abi = abi
 
 	return nil
+}
+
+func (a AvalancheProvider) ChainName() string {
+	return a.PCfg.ChainName
+}
+
+func (a AvalancheProvider) ChainId() string {
+	return a.PCfg.ChainID
+}
+
+func (a AvalancheProvider) Type() string {
+	return "avalanche"
+}
+
+func (a AvalancheProvider) ProviderConfig() provider.ProviderConfig {
+	return a.PCfg
+}
+
+func (a AvalancheProvider) Key() string {
+	return a.PCfg.Key
+}
+
+func (a AvalancheProvider) Address() (string, error) {
+	info, err := a.Keybase.Key(a.PCfg.Key)
+	if err != nil {
+		return "", err
+	}
+
+	acc, err := info.GetAddress()
+	if err != nil {
+		return "", err
+	}
+	out := a.EncodeAccAddr(acc)
+
+	return out, nil
+}
+
+func (a AvalancheProvider) Timeout() string {
+	return a.PCfg.Timeout
+}
+
+func (a AvalancheProvider) TrustingPeriod(ctx context.Context) (time.Duration, error) {
+	// TODO
+	return time.Hour * 2, nil
+}
+
+func (a AvalancheProvider) WaitForNBlocks(ctx context.Context, n int64) error {
+	var initial uint64
+	// if avalanche node is not synced then nil is returned
+	err := a.ethClient.SyncProgress(ctx)
+	// node is syncing
+	if err != nil {
+		return fmt.Errorf("chain catching up")
+	}
+
+	latestBlockNumber, err := a.ethClient.BlockNumber(ctx)
+	if err != nil {
+		return err
+	}
+	initial = latestBlockNumber
+
+	for {
+		latestBlockNumber, err = a.ethClient.BlockNumber(ctx)
+		if err != nil {
+			return err
+		}
+		if latestBlockNumber > initial+uint64(n) {
+			return nil
+		}
+		select {
+		case <-time.After(10 * time.Millisecond):
+			// Nothing to do.
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func (a AvalancheProvider) BlockTime(ctx context.Context, height int64) (time.Time, error) {
+	block, err := a.ethClient.BlockByNumber(ctx, big.NewInt(height))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Unix(int64(block.Time()), 0), nil
 }
 
 func (a *AvalancheProvider) Sprint(toPrint proto.Message) (string, error) {
