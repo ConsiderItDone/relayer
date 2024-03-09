@@ -1,6 +1,6 @@
 {
   "src": {
-    "chain-id": "ibc-0"
+    "chain-id": "99999"
   },
   "dst": {
     "chain-id": "ibc-1"
