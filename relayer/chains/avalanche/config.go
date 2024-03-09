@@ -1,8 +1,10 @@
 package avalanche
 
 import (
+	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -17,6 +19,8 @@ var _ provider.ProviderConfig = &AvalancheProviderConfig{}
 
 type AvalancheProviderConfig struct {
 	RPCAddr         string                  `json:"rpc-addr" yaml:"rpc-addr"`
+	BaseRPCAddr     string                  `json:"base-rpc-addr" yaml:"base-rpc-addr"`
+	SubnetID        string                  `json:"subnet-id" yaml:"subnet-id"`
 	ChainID         string                  `json:"chain-id" yaml:"chain-id"`
 	ChainName       string                  `json:"-" yaml:"-"`
 	Timeout         string                  `json:"timeout" yaml:"timeout"`
@@ -33,6 +37,8 @@ func (ac AvalancheProviderConfig) NewProvider(log *zap.Logger, homepath string, 
 	if err := ac.Validate(); err != nil {
 		return nil, err
 	}
+
+	ac.KeyDirectory = keysDir(homepath, fmt.Sprintf("avalanche-%s", ac.ChainID))
 	ac.ChainName = chainName
 
 	ac.Modules = append([]module.AppModuleBasic{}, moduleBasics...)
@@ -54,9 +60,19 @@ func (ac AvalancheProviderConfig) Validate() error {
 		return err
 	}
 
+	_, err = url.Parse(ac.BaseRPCAddr)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (ac AvalancheProviderConfig) BroadcastMode() provider.BroadcastMode {
 	return provider.BroadcastModeSingle
+}
+
+// keysDir returns a string representing the path on the local filesystem where the keystore will be initialized.
+func keysDir(home, chainID string) string {
+	return path.Join(home, "keys", chainID)
 }

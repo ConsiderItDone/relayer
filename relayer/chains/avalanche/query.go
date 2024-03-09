@@ -2,6 +2,7 @@ package avalanche
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -31,36 +32,29 @@ func (a AvalancheProvider) QueryLatestHeight(ctx context.Context) (int64, error)
 }
 
 func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provider.IBCHeader, error) {
+	// query EVM header by number
+	ethHeader, err := a.ethClient.HeaderByNumber(ctx, big.NewInt(h))
+	if err != nil {
+		return nil, err
+	}
 
-	//type ConsensusState struct {
-	//	// timestamp that corresponds to the block height in which the ConsensusState
-	//	// was stored.
-	//	Timestamp          time.Time    `protobuf:"bytes,1,opt,name=timestamp,proto3,stdtime" json:"timestamp"`
-	//	StorageRoot        []byte       `protobuf:"bytes,2,opt,name=storage_root,json=storageRoot,proto3" json:"storage_root,omitempty"`
-	//	SignedStorageRoot  []byte       `protobuf:"bytes,3,opt,name=signed_storage_root,json=signedStorageRoot,proto3" json:"signed_storage_root,omitempty"`
-	//	ValidatorSet       []byte       `protobuf:"bytes,4,opt,name=validator_set,json=validatorSet,proto3" json:"validator_set,omitempty"`
-	//	SignedValidatorSet []byte       `protobuf:"bytes,5,opt,name=signed_validator_set,json=signedValidatorSet,proto3" json:"signed_validator_set,omitempty"`
-	//	Vdrs               []*Validator `protobuf:"bytes,6,rep,name=vdrs,proto3" json:"vdrs,omitempty"`
-	//	SignersInput       []byte       `protobuf:"bytes,8,opt,name=signers_input,json=signersInput,proto3" json:"signers_input,omitempty"`
-	//}
+	// query P-Chain block number by EVM height
+	pChainHeight, err := a.ibcClient.GetPChainHeight(ctx, ethHeader.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
 
-	//b, _ := a.ethClient.BlockByNumber(context.Background(), big.NewInt(1))
-	//timestamp := b.Timestamp()
-	//storageRoot := b.Root()
-	//validatorSet := a.pClient.getCurrentValidators(a.PCfg.ChainID ? or a.PCfg.SubnetId)
-	//for i, validator := range validatorSet {
-	//	blsClient := ibc2.NewIbcClient(validatorURL, a.PCfg.SubnetId)
-	//	signedStorageRoot_i := blsClient.GetBlsProof(context.Background(), storageRoot)
-	//	signedVS_i := blsClient.GetBlsProof(context.Background(), validatorSet)
-	//}
-	//
-	//signedStorageRoot, err := bls.AggregateSignatures([]*bls.Signature{signedStorageRoot_0, signedStorageRoot_1, signedStorageRoot_2})
-	//SignedValidatorSet := bls.AggregateSignatures([]*bls.Signature{signedVS_0, signedVS_1})
-	//Vdrs := ??
-	//SignersInput := ??
+	// query P-Chain validators
+	validators, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, pChainHeight)
+	if err != nil {
+		return nil, err
+	}
 
-	//TODO implement me
-	panic("implement me")
+	return AvalancheIBCHeader{
+		EthHeader:  ethHeader,
+		Validators: validators,
+	}, nil
+
 }
 
 func (a AvalancheProvider) QuerySendPacket(ctx context.Context, srcChanID, srcPortID string, sequence uint64) (provider.PacketInfo, error) {
@@ -83,8 +77,7 @@ func (a AvalancheProvider) QueryBalanceWithAddress(ctx context.Context, addr str
 }
 
 func (a AvalancheProvider) QueryUnbondingPeriod(ctx context.Context) (time.Duration, error) {
-	//TODO implement me
-	panic("implement me")
+	return 0, nil
 }
 
 func (a AvalancheProvider) QueryClientState(ctx context.Context, height int64, clientid string) (ibcexported.ClientState, error) {

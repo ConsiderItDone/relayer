@@ -19,9 +19,9 @@ import (
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	avaclient "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
@@ -93,6 +93,7 @@ func (a AvalancheProvider) waitForTx(
 		}
 		return
 	}
+	events = transformEvents(events)
 
 	rlyResp := &provider.RelayerTxResponse{
 		Height:    receipt.BlockNumber.Int64(),
@@ -356,20 +357,21 @@ func (a AvalancheProvider) NewClientState(
 }
 
 func (a AvalancheProvider) MsgCreateClient(clientState ibcexported.ClientState, consensusState ibcexported.ConsensusState) (provider.RelayerMessage, error) {
-	anyClientState, err := clienttypes.PackClientState(clientState)
-	if err != nil {
-		return nil, err
+	tmClientState, ok := clientState.(*tendermint.ClientState)
+	if !ok {
+		return nil, errors.New("unable to cast to tendermint Client State")
 	}
-	clientStateBz, err := anyClientState.Marshal()
+
+	clientStateBz, err := tmClientState.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	anyConsensusState, err := clienttypes.PackConsensusState(consensusState)
-	if err != nil {
-		return nil, err
+	tmConsensusState, ok := consensusState.(*tendermint.ConsensusState)
+	if !ok {
+		return nil, errors.New("unable to cast to tendermint Consensus State")
 	}
-	consensusStateBz, err := anyConsensusState.Marshal()
+	consensusStateBz, err := tmConsensusState.Marshal()
 	if err != nil {
 		return nil, err
 	}
@@ -620,14 +622,14 @@ func (a AvalancheProvider) MsgConnectionOpenTry(msgOpenInit provider.ConnectionI
 	return NewEVMMessage(msg), nil
 }
 
-func (a AvalancheProvider) BlockTime(ctx context.Context, height int64) (time.Time, error) {
-	block, err := a.ethClient.BlockByNumber(ctx, big.NewInt(height))
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return time.Unix(int64(block.Time()), 0), nil
-}
+//func (a AvalancheProvider) BlockTime(ctx context.Context, height int64) (time.Time, error) {
+//	block, err := a.ethClient.BlockByNumber(ctx, big.NewInt(height))
+//	if err != nil {
+//		return time.Time{}, err
+//	}
+//
+//	return time.Unix(int64(block.Time()), 0), nil
+//}
 
 func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
 	//TODO implement me
@@ -745,49 +747,6 @@ func (a AvalancheProvider) AcknowledgementFromSequence(ctx context.Context, dst 
 }
 
 func (a AvalancheProvider) MsgRegisterCounterpartyPayee(portID, channelID, relayerAddr, counterpartyPayeeAddr string) (provider.RelayerMessage, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a AvalancheProvider) ChainName() string {
-	return a.PCfg.ChainName
-}
-
-func (a AvalancheProvider) ChainId() string {
-	return a.PCfg.ChainID
-}
-
-func (a AvalancheProvider) Type() string {
-	return "avalanche"
-}
-
-func (a AvalancheProvider) ProviderConfig() provider.ProviderConfig {
-	return a.PCfg
-}
-
-// TODO: use json-file as a key storage.
-func (a AvalancheProvider) Key() string {
-	return "someKey"
-}
-
-// TODO: use json-file as a key storage.
-// See https://github.com/ethereum/go-ethereum/blob/bc6d184872889224480cf9df58b0539b210ffa9e/cmd/ethkey/inspect.go#L61
-func (a AvalancheProvider) Address() (string, error) {
-	keyAddr := crypto.PubkeyToAddress(tempKey.PublicKey)
-
-	return keyAddr.Hex(), nil
-}
-
-func (a AvalancheProvider) Timeout() string {
-	return a.PCfg.Timeout
-}
-
-func (a AvalancheProvider) TrustingPeriod(ctx context.Context) (time.Duration, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a AvalancheProvider) WaitForNBlocks(ctx context.Context, n int64) error {
 	//TODO implement me
 	panic("implement me")
 }

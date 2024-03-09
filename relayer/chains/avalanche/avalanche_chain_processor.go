@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
-	"github.com/ava-labs/subnet-evm/core/types"
 	"github.com/avast/retry-go/v4"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
@@ -250,125 +248,125 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 	)
 
 	// used at the end of the cycle to send signal to path processors to start processing if both chains are in sync and no new messages came in this cycle
-	firstTimeInSync := false
+	//firstTimeInSync := false
+	//
+	//if !acp.inSync {
+	//	if (persistence.latestHeight - persistence.latestQueriedBlock) < inSyncNumBlocksThreshold {
+	//		acp.inSync = true
+	//		firstTimeInSync = true
+	//		acp.log.Info("Chain is in sync")
+	//	} else {
+	//		acp.log.Info("Chain is not yet in sync",
+	//			zap.Int64("latest_queried_block", persistence.latestQueriedBlock),
+	//			zap.Int64("latest_height", persistence.latestHeight),
+	//		)
+	//	}
+	//}
+	//
+	//ibcMessagesCache := processor.NewIBCMessagesCache()
+	//
+	//ibcHeaderCache := make(processor.IBCHeaderCache)
+	//
+	//ppChanged := false
 
-	if !acp.inSync {
-		if (persistence.latestHeight - persistence.latestQueriedBlock) < inSyncNumBlocksThreshold {
-			acp.inSync = true
-			firstTimeInSync = true
-			acp.log.Info("Chain is in sync")
-		} else {
-			acp.log.Info("Chain is not yet in sync",
-				zap.Int64("latest_queried_block", persistence.latestQueriedBlock),
-				zap.Int64("latest_height", persistence.latestHeight),
-			)
-		}
-	}
-
-	ibcMessagesCache := processor.NewIBCMessagesCache()
-
-	ibcHeaderCache := make(processor.IBCHeaderCache)
-
-	ppChanged := false
-
-	var latestHeader AvalancheIBCHeader
-
-	newLatestQueriedBlock := persistence.latestQueriedBlock
-
-	chainID := acp.chainProvider.ChainId()
-
-	for i := persistence.latestQueriedBlock + 1; i <= persistence.latestHeight; i++ {
-		var eg errgroup.Group
-		var blockRes *types.Block
-		var ibcHeader provider.IBCHeader
-		i := i
-		eg.Go(func() (err error) {
-			queryCtx, cancelQueryCtx := context.WithTimeout(ctx, blockResultsQueryTimeout)
-			defer cancelQueryCtx()
-			blockRes, err = acp.chainProvider.ethClient.BlockByNumber(queryCtx, big.NewInt(i))
-			return err
-		})
-		eg.Go(func() (err error) {
-			queryCtx, cancelQueryCtx := context.WithTimeout(ctx, queryTimeout)
-			defer cancelQueryCtx()
-			ibcHeader, err = acp.chainProvider.QueryIBCHeader(queryCtx, i)
-			return err
-		})
-
-		if err := eg.Wait(); err != nil {
-			acp.log.Warn("Error querying block data", zap.Error(err))
-			break
-		}
-
-		latestHeader = ibcHeader.(AvalancheIBCHeader)
-
-		heightUint64 := uint64(i)
-
-		acp.latestBlock = provider.LatestBlock{
-			Height: heightUint64,
-			Time:   latestHeader.SignedHeader.Time,
-		}
-
-		ibcHeaderCache[heightUint64] = latestHeader
-		ppChanged = true
-
-		blockMsgs := acp.ibcMessagesFromBlockEvents(blockRes.BeginBlockEvents, blockRes.EndBlockEvents, heightUint64, true)
-		for _, m := range blockMsgs {
-			acp.handleMessage(m, ibcMessagesCache)
-		}
-
-		for _, tx := range blockRes.TxsResults {
-			if tx.Code != 0 {
-				// tx was not successful
-				continue
-			}
-			messages := ibcMessagesFromEvents(pcp.log, tx.Events, chainID, heightUint64, true)
-
-			for _, m := range messages {
-				pcp.handleMessage(m, ibcMessagesCache)
-			}
-		}
-		newLatestQueriedBlock = i
-	}
-
-	if newLatestQueriedBlock == persistence.latestQueriedBlock {
-		return nil
-	}
-
-	if !ppChanged {
-		if firstTimeInSync {
-			for _, pp := range acp.pathProcessors {
-				pp.ProcessBacklogIfReady()
-			}
-		}
-
-		return nil
-	}
-
-	for _, pp := range acp.pathProcessors {
-		clientID := pp.RelevantClientID(chainID)
-		clientState, err := acp.clientState(ctx, clientID)
-		if err != nil {
-			acp.log.Error("Error fetching client state",
-				zap.String("client_id", clientID),
-				zap.Error(err),
-			)
-			continue
-		}
-
-		pp.HandleNewData(chainID, processor.ChainProcessorCacheData{
-			LatestBlock:          acp.latestBlock,
-			LatestHeader:         latestHeader,
-			IBCMessagesCache:     ibcMessagesCache.Clone(),
-			InSync:               acp.inSync,
-			ClientState:          clientState,
-			ConnectionStateCache: acp.connectionStateCache.FilterForClient(clientID),
-			ChannelStateCache:    acp.channelStateCache.FilterForClient(clientID, pcp.channelConnections, pcp.connectionClients),
-			IBCHeaderCache:       ibcHeaderCache.Clone(),
-		})
-	}
-
-	persistence.latestQueriedBlock = newLatestQueriedBlock
+	//var latestHeader AvalancheIBCHeader
+	//
+	//newLatestQueriedBlock := persistence.latestQueriedBlock
+	//
+	//chainID := acp.chainProvider.ChainId()
+	//
+	//for i := persistence.latestQueriedBlock + 1; i <= persistence.latestHeight; i++ {
+	//	var eg errgroup.Group
+	//	var blockRes *types.Block
+	//	var ibcHeader provider.IBCHeader
+	//	i := i
+	//	eg.Go(func() (err error) {
+	//		queryCtx, cancelQueryCtx := context.WithTimeout(ctx, blockResultsQueryTimeout)
+	//		defer cancelQueryCtx()
+	//		blockRes, err = acp.chainProvider.ethClient.BlockByNumber(queryCtx, big.NewInt(i))
+	//		return err
+	//	})
+	//	eg.Go(func() (err error) {
+	//		queryCtx, cancelQueryCtx := context.WithTimeout(ctx, queryTimeout)
+	//		defer cancelQueryCtx()
+	//		ibcHeader, err = acp.chainProvider.QueryIBCHeader(queryCtx, i)
+	//		return err
+	//	})
+	//
+	//	if err := eg.Wait(); err != nil {
+	//		acp.log.Warn("Error querying block data", zap.Error(err))
+	//		break
+	//	}
+	//
+	//	latestHeader = ibcHeader.(AvalancheIBCHeader)
+	//
+	//	heightUint64 := uint64(i)
+	//
+	//	acp.latestBlock = provider.LatestBlock{
+	//		Height: heightUint64,
+	//		Time:   latestHeader.SignedHeader.Time,
+	//	}
+	//
+	//	ibcHeaderCache[heightUint64] = latestHeader
+	//	ppChanged = true
+	//
+	//	blockMsgs := acp.ibcMessagesFromBlockEvents(blockRes.BeginBlockEvents, blockRes.EndBlockEvents, heightUint64, true)
+	//	for _, m := range blockMsgs {
+	//		acp.handleMessage(m, ibcMessagesCache)
+	//	}
+	//
+	//	for _, tx := range blockRes.TxsResults {
+	//		if tx.Code != 0 {
+	//			// tx was not successful
+	//			continue
+	//		}
+	//		messages := ibcMessagesFromEvents(pcp.log, tx.Events, chainID, heightUint64, true)
+	//
+	//		for _, m := range messages {
+	//			pcp.handleMessage(m, ibcMessagesCache)
+	//		}
+	//	}
+	//	newLatestQueriedBlock = i
+	//}
+	//
+	//if newLatestQueriedBlock == persistence.latestQueriedBlock {
+	//	return nil
+	//}
+	//
+	//if !ppChanged {
+	//	if firstTimeInSync {
+	//		for _, pp := range acp.pathProcessors {
+	//			pp.ProcessBacklogIfReady()
+	//		}
+	//	}
+	//
+	//	return nil
+	//}
+	//
+	//for _, pp := range acp.pathProcessors {
+	//	clientID := pp.RelevantClientID(chainID)
+	//	clientState, err := acp.clientState(ctx, clientID)
+	//	if err != nil {
+	//		acp.log.Error("Error fetching client state",
+	//			zap.String("client_id", clientID),
+	//			zap.Error(err),
+	//		)
+	//		continue
+	//	}
+	//
+	//	pp.HandleNewData(chainID, processor.ChainProcessorCacheData{
+	//		LatestBlock:          acp.latestBlock,
+	//		LatestHeader:         latestHeader,
+	//		IBCMessagesCache:     ibcMessagesCache.Clone(),
+	//		InSync:               acp.inSync,
+	//		ClientState:          clientState,
+	//		ConnectionStateCache: acp.connectionStateCache.FilterForClient(clientID),
+	//		ChannelStateCache:    acp.channelStateCache.FilterForClient(clientID, pcp.channelConnections, pcp.connectionClients),
+	//		IBCHeaderCache:       ibcHeaderCache.Clone(),
+	//	})
+	//}
+	//
+	//persistence.latestQueriedBlock = newLatestQueriedBlock
 
 	return nil
 }

@@ -10,9 +10,10 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // CreateClients creates clients for src on dst and dst on src if the client ids are unspecified.
@@ -169,10 +170,11 @@ func CreateClient(
 	if !override {
 		// Check if an identical light client already exists on the src chain which matches the
 		// proposed new client state from dst.
-		clientID, err = findMatchingClient(ctx, src, dst, clientState)
-		if err != nil {
-			return "", fmt.Errorf("failed to find a matching client for the new client state: %w", err)
-		}
+		// TODO
+		//clientID, err = findMatchingClient(ctx, src, dst, clientState)
+		//if err != nil {
+		//	return "", fmt.Errorf("failed to find a matching client for the new client state: %w", err)
+		//}
 	}
 
 	if clientID != "" && !override {

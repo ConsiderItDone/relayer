@@ -8,12 +8,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/snow/validators"
+	"github.com/ava-labs/avalanchego/vms/platformvm"
 	"github.com/ava-labs/subnet-evm/accounts/abi"
+	"github.com/ava-labs/subnet-evm/core/types"
 	"github.com/ava-labs/subnet-evm/rpc"
 	"github.com/ava-labs/subnet-evm/tests/precompile/contract"
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/gogoproto/proto"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 
@@ -39,6 +45,33 @@ var (
 	rtyErr    = retry.LastErrorOnly(true)
 )
 
+type AvalancheIBCHeader struct {
+	EthHeader  *types.Header
+	Validators map[ids.NodeID]*validators.GetValidatorOutput
+	//SignedHeader *tmtypes.SignedHeader
+	//ValidatorSet *tmtypes.ValidatorSet
+}
+
+func (h AvalancheIBCHeader) Height() uint64 {
+	return h.EthHeader.Number.Uint64()
+}
+
+func (h AvalancheIBCHeader) ConsensusState() ibcexported.ConsensusState {
+	return &avalanche.ConsensusState{
+		Timestamp:          time.Unix(int64(h.EthHeader.Time), 0),
+		StorageRoot:        h.EthHeader.Root.Bytes(),
+		SignedStorageRoot:  nil,
+		ValidatorSet:       nil,
+		SignedValidatorSet: nil,
+		Vdrs:               nil,
+		SignersInput:       nil,
+	}
+}
+
+func (h AvalancheIBCHeader) NextValidatorsHash() []byte {
+	return nil
+}
+
 type AvalancheProvider struct {
 	log *zap.Logger
 
@@ -50,9 +83,12 @@ type AvalancheProvider struct {
 	Codec          Codec
 
 	ethClient    ethclient.Client
+	ibcClient    IbcClient
 	subnetClient *subnetevmclient.Client
+	pClient      platformvm.Client
 	txAuth       *bind.TransactOpts
 	abi          abi.ABI
+	subnetID     ids.ID
 }
 
 func (a *AvalancheProvider) Init(ctx context.Context) error {
@@ -62,20 +98,38 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	}
 	a.ethClient = ethclient.NewClient(rpcClient)
 	a.subnetClient = subnetevmclient.New(rpcClient)
+	a.pClient = platformvm.NewClient(a.PCfg.BaseRPCAddr)
+	ibcClient, err := NewIbcClient(a.PCfg.RPCAddr)
+	a.ibcClient = ibcClient
 
-	chainId, _ := new(big.Int).SetString(a.PCfg.ChainID, 10)
+	chainId, ok := new(big.Int).SetString(a.PCfg.ChainID, 10)
+	if !ok {
+		return fmt.Errorf("invalid chain id %s", a.PCfg.ChainID)
+	}
 
 	a.txAuth, err = bind.NewKeyedTransactorWithChainID(tempKey, chainId)
+	if err != nil {
+		return err
+	}
 
 	keybase, err := keyring.New(a.PCfg.ChainID, a.PCfg.KeyringBackend, a.PCfg.KeyDirectory, a.Input, a.Codec.Marshaler, a.KeyringOptions...)
+	if err != nil {
+		return err
+	}
 
 	abi, err := abi.JSON(strings.NewReader(contract.ContractMetaData.ABI))
 	if err != nil {
 		return err
 	}
 
+	subnetID, err := ids.FromString(a.PCfg.SubnetID)
+	if err != nil {
+		return err
+	}
+
 	a.Keybase = keybase
 	a.abi = abi
+	a.subnetID = subnetID
 
 	return nil
 }

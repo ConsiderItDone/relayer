@@ -6,6 +6,7 @@ import (
 
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
@@ -23,6 +24,25 @@ var (
 		eventConnectionCreated,
 	}
 )
+
+func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent {
+	var events []provider.RelayerEvent
+
+	for _, event := range origEvents {
+		switch event.EventType {
+		case eventClientCreated:
+			attributes := make(map[string]string)
+			attributes[clienttypes.AttributeKeyClientID] = event.Attributes["clientId"]
+
+			events = append(events, provider.RelayerEvent{
+				EventType:  clienttypes.EventTypeCreateClient,
+				Attributes: attributes,
+			})
+		}
+	}
+
+	return events
+}
 
 func parseEventsFromTxReceipt(contractABI abi.ABI, receipt *evmtypes.Receipt) ([]provider.RelayerEvent, error) {
 	var events []provider.RelayerEvent
@@ -65,7 +85,6 @@ func parseEventsFromTxReceipt(contractABI abi.ABI, receipt *evmtypes.Receipt) ([
 			attributes := make(map[string]string)
 			for key, value := range eventMap {
 				attributes[key] = fmt.Sprintf("%v", value)
-
 			}
 
 			events = append(events, provider.RelayerEvent{
