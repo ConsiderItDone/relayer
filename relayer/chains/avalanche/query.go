@@ -5,12 +5,15 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ava-labs/subnet-evm/accounts/abi/bind"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
@@ -86,7 +89,32 @@ func (a AvalancheProvider) QueryClientState(ctx context.Context, height int64, c
 }
 
 func (a AvalancheProvider) QueryClientStateResponse(ctx context.Context, height int64, srcClientId string) (*clienttypes.QueryClientStateResponse, error) {
+	clientStateBz, err := a.ibcContract.QueryClientState(&bind.CallOpts{BlockNumber: big.NewInt(height)}, srcClientId)
+	if err != nil {
+		return nil, err
+	}
 
+	// check if client exists
+	if len(clientStateBz) == 0 {
+		return nil, sdkerrors.Wrap(clienttypes.ErrClientNotFound, srcClientId)
+	}
+
+	tmClientState := tendermint.ClientState{}
+	err = tmClientState.Unmarshal(clientStateBz)
+	if err != nil {
+		return nil, err
+	}
+
+	anyClientState, err := clienttypes.PackClientState(&tmClientState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clienttypes.QueryClientStateResponse{
+		ClientState: anyClientState,
+		Proof:       nil,
+		ProofHeight: clienttypes.Height{},
+	}, nil
 	// query client state
 	//clientState := ibcContract.GetClientState(clientId) // TODO @ramil
 	//
@@ -105,8 +133,6 @@ func (a AvalancheProvider) QueryClientStateResponse(ctx context.Context, height 
 	//	Proof:       clientStateProof.StorageProof,
 	//	ProofHeight: clientStateProof.Height, // TODO @ramil
 	//}
-	panic("implement me")
-
 }
 
 func (a AvalancheProvider) QueryClientConsensusState(ctx context.Context, chainHeight int64, clientid string, clientHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
