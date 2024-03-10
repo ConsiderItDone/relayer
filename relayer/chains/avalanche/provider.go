@@ -13,6 +13,7 @@ import (
 	"github.com/ava-labs/avalanchego/vms/platformvm"
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	"github.com/ava-labs/subnet-evm/core/types"
+	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	"github.com/ava-labs/subnet-evm/rpc"
 	"github.com/ava-labs/subnet-evm/tests/precompile/contract"
 	"github.com/avast/retry-go/v4"
@@ -89,6 +90,7 @@ type AvalancheProvider struct {
 	txAuth       *bind.TransactOpts
 	abi          abi.ABI
 	subnetID     ids.ID
+	ibcContract  *contract.Contract
 }
 
 func (a *AvalancheProvider) Init(ctx context.Context) error {
@@ -127,9 +129,15 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 		return err
 	}
 
+	ibcContract, err := contract.NewContract(ibc.ContractAddress, a.ethClient)
+	if err != nil {
+		return err
+	}
+
 	a.Keybase = keybase
 	a.abi = abi
 	a.subnetID = subnetID
+	a.ibcContract = ibcContract
 
 	return nil
 }
