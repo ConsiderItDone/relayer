@@ -11,9 +11,10 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // messageProcessor is used for concurrent IBC message assembly and sending
@@ -95,11 +96,13 @@ func (mp *messageProcessor) processMessages(
 
 	// Localhost IBC does not permit client updates
 	if src.clientState.ClientID != ibcexported.LocalhostClientID && dst.clientState.ClientID != ibcexported.LocalhostConnectionID {
-		var err error
-		needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
-		if err != nil {
-			return err
-		}
+		// TODO
+		//var err error
+		needsClientUpdate = false
+		//needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
+		//if err != nil {
+		//	return err
+		//}
 
 		if err := mp.assembleMsgUpdateClient(ctx, src, dst); err != nil {
 			return err
