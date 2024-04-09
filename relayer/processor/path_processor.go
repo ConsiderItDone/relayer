@@ -9,6 +9,8 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 const (

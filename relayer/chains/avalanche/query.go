@@ -2,9 +2,14 @@ package avalanche
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"time"
 
+	"github.com/ava-labs/avalanchego/utils"
+	"github.com/ava-labs/avalanchego/utils/crypto/bls"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp/payload"
 	"github.com/ava-labs/subnet-evm/accounts/abi/bind"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -14,6 +19,8 @@ import (
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
+	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
+	"golang.org/x/exp/maps"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
@@ -41,23 +48,108 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 		return nil, err
 	}
 
-	// query P-Chain block number by EVM height
-	pChainHeight, err := a.ibcClient.GetPChainHeight(ctx, ethHeader.Number.Uint64())
-	if err != nil {
-		return nil, err
-	}
+	validatorSet, vdrs, err := a.avalancheValidatorSet(ctx, ethHeader.Number.Uint64())
 
-	// query P-Chain validators
-	validators, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, pChainHeight)
-	if err != nil {
-		return nil, err
-	}
+	signedStorageRoot, _, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
+	signedValidatorSet, signers, err := a.avalancheBlsSignature(ctx, validatorSet)
 
 	return AvalancheIBCHeader{
-		EthHeader:  ethHeader,
-		Validators: validators,
+		EthHeader:          ethHeader,
+		SignedStorageRoot:  signedStorageRoot,
+		SignedValidatorSet: signedValidatorSet,
+		ValidatorSet:       validatorSet,
+		Vdrs:               vdrs,
+		SignersInput:       signers,
 	}, nil
 
+}
+
+func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight uint64) ([]byte, []*avalanche.Validator, error) {
+	// query P-Chain block number by EVM height
+	pChainHeight, err := a.ibcClient.GetPChainHeight(ctx, evmHeight)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// query P-Chain validators at specific height
+	vdrSet, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, pChainHeight)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	vdrs := make(map[string]*Validator, len(vdrSet))
+	for _, vdr := range vdrSet {
+		if vdr.PublicKey == nil {
+			continue
+		}
+
+		pkBytes := bls.SerializePublicKey(vdr.PublicKey)
+		uniqueVdr, ok := vdrs[string(pkBytes)]
+		if !ok {
+			uniqueVdr = &Validator{
+				PublicKey:      vdr.PublicKey,
+				PublicKeyBytes: pkBytes,
+			}
+			vdrs[string(pkBytes)] = uniqueVdr
+		}
+
+		uniqueVdr.Weight += vdr.Weight // Impossible to overflow here
+		uniqueVdr.NodeIDs = append(uniqueVdr.NodeIDs, vdr.NodeID)
+	}
+	// Sort validators by public key
+	vdrList := maps.Values(vdrs)
+	utils.Sort(vdrList)
+
+	var avaVldrs []*avalanche.Validator
+	for _, v := range vdrList {
+		avaVldrs = append(avaVldrs, &avalanche.Validator{
+			PublicKeyByte: v.PublicKeyBytes,
+			Weight:        v.Weight,
+			NodeIDs:       [][]byte{v.NodeIDs[0].Bytes()},
+			EndTime:       time.Time{},
+		})
+	}
+
+	// Avalanche validator set in binary format
+	var avaVldrsBz []byte
+	for _, vldr := range avaVldrs {
+		data, err := vldr.Marshal()
+		if err != nil {
+			return nil, nil, err
+		}
+		avaVldrsBz = append(avaVldrsBz, data...)
+	}
+
+	return avaVldrsBz, avaVldrs, nil
+}
+
+func (a AvalancheProvider) avalancheBlsSignature(ctx context.Context, payloadData []byte) ([bls.SignatureLen]byte, []byte, error) {
+	addressedPayload, err := payload.NewAddressedCall(
+		[]byte{},
+		payloadData,
+	)
+	if err != nil {
+		return [96]byte{}, nil, err
+	}
+	unsignedMessage, err := warp.NewUnsignedMessage(a.PCfg.NetworkID, a.blockchainID, addressedPayload.Bytes())
+	if err != nil {
+		return [96]byte{}, nil, err
+	}
+	signedWarpMessageBytes, err := a.ibcClient.GetMessageAggregateSignature(ctx, unsignedMessage.ID(), 3, a.PCfg.SubnetID)
+	if err != nil {
+		return [96]byte{}, nil, err
+	}
+
+	warpMsg, err := warp.ParseMessage(signedWarpMessageBytes)
+	if err != nil {
+		return [96]byte{}, nil, err
+	}
+
+	bitsetSignature, ok := warpMsg.Signature.(*warp.BitSetSignature)
+	if !ok {
+		return [96]byte{}, nil, errors.New("unable to cast warp signature to BitSetSignature")
+	}
+	return bitsetSignature.Signature, bitsetSignature.Signers, nil
 }
 
 func (a AvalancheProvider) QuerySendPacket(ctx context.Context, srcChanID, srcPortID string, sequence uint64) (provider.PacketInfo, error) {
@@ -84,8 +176,23 @@ func (a AvalancheProvider) QueryUnbondingPeriod(ctx context.Context) (time.Durat
 }
 
 func (a AvalancheProvider) QueryClientState(ctx context.Context, height int64, clientid string) (ibcexported.ClientState, error) {
-	//TODO implement me
-	panic("implement me")
+	clientStateBz, err := a.ibcContract.QueryClientState(&bind.CallOpts{BlockNumber: big.NewInt(height)}, clientid)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if client exists
+	if len(clientStateBz) == 0 {
+		return nil, sdkerrors.Wrap(clienttypes.ErrClientNotFound, clientid)
+	}
+
+	tmClientState := tendermint.ClientState{}
+	err = tmClientState.Unmarshal(clientStateBz)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tmClientState, nil
 }
 
 func (a AvalancheProvider) QueryClientStateResponse(ctx context.Context, height int64, srcClientId string) (*clienttypes.QueryClientStateResponse, error) {
@@ -115,24 +222,6 @@ func (a AvalancheProvider) QueryClientStateResponse(ctx context.Context, height 
 		Proof:       nil,
 		ProofHeight: clienttypes.Height{},
 	}, nil
-	// query client state
-	//clientState := ibcContract.GetClientState(clientId) // TODO @ramil
-	//
-	//// query client state proof
-	//clientStateSlots := ibc.GetClientStateSlots(a.subnetClient, ibc.ContractAddress, srcClientId)
-	//
-	//keys := make([]string, 0)
-	//for _, slot := range clientStateSlots {
-	//	keys = append(keys, slot.Hex())
-	//}
-	//
-	//clientStateProof, err := a.subnetClient.GetProof(context.Background(), ibc.ContractAddress, keys, nil)
-	//
-	//return &clienttypes.QueryClientStateResponse{
-	//	ClientState: clientState,
-	//	Proof:       clientStateProof.StorageProof,
-	//	ProofHeight: clientStateProof.Height, // TODO @ramil
-	//}
 }
 
 func (a AvalancheProvider) QueryClientConsensusState(ctx context.Context, chainHeight int64, clientid string, clientHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
@@ -166,8 +255,7 @@ func (a AvalancheProvider) QueryConnection(ctx context.Context, height int64, co
 }
 
 func (a AvalancheProvider) QueryConnections(ctx context.Context) (conns []*conntypes.IdentifiedConnection, err error) {
-	//TODO implement me
-	panic("implement me")
+	return conns, nil
 }
 
 func (a AvalancheProvider) QueryConnectionsUsingClient(ctx context.Context, height int64, clientid string) (*conntypes.QueryConnectionsResponse, error) {
@@ -196,8 +284,9 @@ func (a AvalancheProvider) QueryConnectionChannels(ctx context.Context, height i
 }
 
 func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.IdentifiedChannel, error) {
-	//TODO implement me
-	panic("implement me")
+	chans := []*chantypes.IdentifiedChannel{}
+
+	return chans, nil
 }
 
 func (a AvalancheProvider) QueryPacketCommitments(ctx context.Context, height uint64, channelid, portid string) (commitments *chantypes.QueryPacketCommitmentsResponse, err error) {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/snow/validators"
+	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"github.com/ava-labs/avalanchego/vms/platformvm"
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	"github.com/ava-labs/subnet-evm/core/types"
@@ -47,10 +47,12 @@ var (
 )
 
 type AvalancheIBCHeader struct {
-	EthHeader  *types.Header
-	Validators map[ids.NodeID]*validators.GetValidatorOutput
-	//SignedHeader *tmtypes.SignedHeader
-	//ValidatorSet *tmtypes.ValidatorSet
+	EthHeader          *types.Header
+	SignedStorageRoot  [bls.SignatureLen]byte
+	SignedValidatorSet [bls.SignatureLen]byte
+	ValidatorSet       []byte
+	Vdrs               []*avalanche.Validator
+	SignersInput       []byte
 }
 
 func (h AvalancheIBCHeader) Height() uint64 {
@@ -61,11 +63,11 @@ func (h AvalancheIBCHeader) ConsensusState() ibcexported.ConsensusState {
 	return &avalanche.ConsensusState{
 		Timestamp:          time.Unix(int64(h.EthHeader.Time), 0),
 		StorageRoot:        h.EthHeader.Root.Bytes(),
-		SignedStorageRoot:  nil,
-		ValidatorSet:       nil,
-		SignedValidatorSet: nil,
-		Vdrs:               nil,
-		SignersInput:       nil,
+		SignedStorageRoot:  h.SignedStorageRoot[:],
+		ValidatorSet:       h.ValidatorSet,
+		SignedValidatorSet: h.SignedValidatorSet[:],
+		Vdrs:               h.Vdrs,
+		SignersInput:       h.SignersInput,
 	}
 }
 
@@ -90,6 +92,7 @@ type AvalancheProvider struct {
 	txAuth       *bind.TransactOpts
 	abi          abi.ABI
 	subnetID     ids.ID
+	blockchainID ids.ID
 	ibcContract  *contract.Contract
 }
 
@@ -129,6 +132,11 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 		return err
 	}
 
+	blockchainID, err := ids.FromString(a.PCfg.BlockchainID)
+	if err != nil {
+		return err
+	}
+
 	ibcContract, err := contract.NewContract(ibc.ContractAddress, a.ethClient)
 	if err != nil {
 		return err
@@ -137,6 +145,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	a.Keybase = keybase
 	a.abi = abi
 	a.subnetID = subnetID
+	a.blockchainID = blockchainID
 	a.ibcContract = ibcContract
 
 	return nil

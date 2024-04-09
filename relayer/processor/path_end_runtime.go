@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
@@ -13,6 +12,8 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // pathEndRuntime is used at runtime for each chain involved in the path.
@@ -653,13 +654,14 @@ func (pathEnd *pathEndRuntime) shouldSendConnectionMessage(message connectionIBC
 	if eventType != conntypes.EventTypeConnectionOpenInit {
 		k = k.Counterparty()
 	}
-	if message.info.Height >= counterparty.latestBlock.Height {
-		pathEnd.log.Debug("Waiting to relay connection message until counterparty height has incremented",
-			zap.Inline(k),
-			zap.String("event_type", eventType),
-		)
-		return false
-	}
+	// TODO
+	//if message.info.Height >= counterparty.latestBlock.Height {
+	//	pathEnd.log.Debug("Waiting to relay connection message until counterparty height has incremented",
+	//		zap.Inline(k),
+	//		zap.String("event_type", eventType),
+	//	)
+	//	return false
+	//}
 	msgProcessCache, ok := pathEnd.connProcessing[eventType]
 	if !ok {
 		// in progress cache does not exist for this eventType, so can send.

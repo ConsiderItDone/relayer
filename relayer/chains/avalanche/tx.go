@@ -110,6 +110,8 @@ func (a AvalancheProvider) waitForTx(
 			cb(rlyResp, nil)
 		}
 	}
+
+	a.LogSuccessTx(receipt)
 }
 
 func (a AvalancheProvider) SendMessages(ctx context.Context, msgs []provider.RelayerMessage, memo string) (*provider.RelayerTxResponse, bool, error) {
@@ -697,8 +699,7 @@ func (a AvalancheProvider) MsgTimeoutOnClose(msgTransfer provider.PacketInfo, pr
 }
 
 func (a AvalancheProvider) CommitmentPrefix() commitmenttypes.MerklePrefix {
-	//TODO implement me
-	panic("implement me")
+	return commitmenttypes.NewMerklePrefix([]byte("AvalancheIBC"))
 }
 
 func (a AvalancheProvider) ConnectionHandshakeProof(ctx context.Context, msgOpenInit provider.ConnectionInfo, height uint64) (provider.ConnectionProof, error) {

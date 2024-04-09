@@ -15,6 +15,8 @@ import (
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer/chains"
+	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 	"github.com/cosmos/relayer/v2/relayer/processor"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
@@ -100,7 +102,7 @@ func (l latestClientState) update(ctx context.Context, clientInfo chains.ClientI
 		trustingPeriod = existingClientInfo.TrustingPeriod
 	}
 	if trustingPeriod == 0 {
-		cs, err := ccp.chainProvider.queryTMClientState(ctx, 0, clientInfo.ClientID)
+		cs, err := ccp.chainProvider.QueryClientState(ctx, 0, clientInfo.clientID)
 		if err != nil {
 			ccp.log.Error(
 				"Failed to query client state to get trusting period",
@@ -109,7 +111,20 @@ func (l latestClientState) update(ctx context.Context, clientInfo chains.ClientI
 			)
 			return
 		}
-		trustingPeriod = cs.TrustingPeriod
+		switch cs.(type) {
+		// tendermint client state
+		case *tmclient.ClientState:
+			trustingPeriod = cs.(*tmclient.ClientState).TrustingPeriod
+		case *avalanche.ClientState:
+			trustingPeriod = cs.(*avalanche.ClientState).TrustingPeriod
+		default:
+			ccp.log.Error(
+				fmt.Sprintf("unknown client state type, got(%T)", cs),
+				zap.String("client_id", clientInfo.clientID),
+				zap.Error(err),
+			)
+			return
+		}
 	}
 	clientState := clientInfo.ClientState(trustingPeriod)
 
@@ -184,14 +199,15 @@ func (ccp *CosmosChainProcessor) clientState(ctx context.Context, clientID strin
 			ConsensusHeight: cs.GetLatestHeight().(clienttypes.Height),
 		}
 	} else {
-		cs, err := ccp.chainProvider.queryTMClientState(ctx, int64(ccp.latestBlock.Height), clientID)
+		cs, err := ccp.chainProvider.QueryClientState(ctx, int64(ccp.latestBlock.Height), clientID)
+		//cs, err := ccp.chainProvider.queryTMClientState(ctx, int64(ccp.latestBlock.Height), clientID)
 		if err != nil {
 			return provider.ClientState{}, err
 		}
 		clientState = provider.ClientState{
 			ClientID:        clientID,
 			ConsensusHeight: cs.GetLatestHeight().(clienttypes.Height),
-			TrustingPeriod:  cs.TrustingPeriod,
+			TrustingPeriod:  0,
 		}
 	}
 

@@ -21,7 +21,9 @@ type AvalancheProviderConfig struct {
 	RPCAddr         string                  `json:"rpc-addr" yaml:"rpc-addr"`
 	BaseRPCAddr     string                  `json:"base-rpc-addr" yaml:"base-rpc-addr"`
 	SubnetID        string                  `json:"subnet-id" yaml:"subnet-id"`
+	BlockchainID    string                  `json:"blockchain-id" yaml:"blockchain-id"`
 	ChainID         string                  `json:"chain-id" yaml:"chain-id"`
+	NetworkID       uint32                  `json:"network-id" yaml:"network-id"`
 	ChainName       string                  `json:"-" yaml:"-"`
 	Timeout         string                  `json:"timeout" yaml:"timeout"`
 	ContractAddress string                  `json:"contract-address" yaml:"contract-address"`

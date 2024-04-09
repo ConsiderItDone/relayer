@@ -3,10 +3,13 @@ package avalanche
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
@@ -24,6 +27,55 @@ var (
 		eventConnectionCreated,
 	}
 )
+
+// ibcMessage is the type used for parsing all possible properties of IBC messages
+type ibcMessage struct {
+	eventType string
+	info      ibcMessageInfo
+}
+
+type ibcMessageInfo interface {
+	parseAttrs(log *zap.Logger, attrs map[string]string)
+	MarshalLogObject(enc zapcore.ObjectEncoder) error
+}
+
+// clientInfo contains the consensus height of the counterparty chain for a client.
+type clientInfo struct {
+	clientID        string
+	consensusHeight clienttypes.Height
+	Height          uint64
+	header          []byte
+}
+
+func (ci *clientInfo) ClientState(trustingPeriod time.Duration) provider.ClientState {
+	return provider.ClientState{
+		ClientID:        ci.clientID,
+		ConsensusHeight: ci.consensusHeight,
+		TrustingPeriod:  trustingPeriod,
+		Header:          ci.header,
+	}
+}
+
+func (ci *clientInfo) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("client_id", ci.clientID)
+	enc.AddUint64("consensus_height", ci.consensusHeight.RevisionHeight)
+	enc.AddUint64("consensus_height_revision", ci.consensusHeight.RevisionNumber)
+	return nil
+}
+
+func (ci *clientInfo) parseAttrs(log *zap.Logger, attributes map[string]string) {
+	for key, value := range attributes {
+		switch key {
+		case clienttypes.AttributeKeyClientID:
+			ci.clientID = value
+		}
+	}
+
+	ci.consensusHeight = clienttypes.Height{
+		RevisionNumber: 0,
+		RevisionHeight: ci.Height,
+	}
+}
 
 func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent {
 	var events []provider.RelayerEvent
@@ -95,4 +147,33 @@ func parseEventsFromTxReceipt(contractABI abi.ABI, receipt *evmtypes.Receipt) ([
 	}
 
 	return events, nil
+}
+
+func ibcMessagesFromEvents(log *zap.Logger, events []provider.RelayerEvent, height uint64) []ibcMessage {
+	var messages []ibcMessage
+	for _, event := range events {
+		m := parseIBCMessageFromEvent(log, event, height)
+		if m == nil || m.info == nil {
+			continue
+		}
+		messages = append(messages, *m)
+	}
+
+	return messages
+}
+
+func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, height uint64) *ibcMessage {
+	switch event.EventType {
+	case eventClientCreated:
+		ci := new(clientInfo)
+		ci.parseAttrs(log, event.Attributes)
+		return &ibcMessage{
+			eventType: event.EventType,
+			info:      ci,
+		}
+	case eventConnectionCreated:
+
+	}
+
+	return nil
 }
