@@ -714,7 +714,27 @@ func (a AvalancheProvider) ConnectionProof(ctx context.Context, msgOpenAck provi
 
 func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
 	//TODO implement me
-	panic("implement me")
+	counterparty := conntypes.Counterparty{
+		ClientId:     info.CounterpartyClientID,
+		ConnectionId: "",
+		Prefix:       defaultChainPrefix,
+	}
+
+	counterpartyBytes, err := counterparty.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	msg, err := ibc.PackConnOpenInit(ibc.ConnOpenInitInput{
+		ClientID:     info.ClientID,
+		Counterparty: counterpartyBytes,
+		Version:      nil,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewEVMMessage(msg), nil
 }
 
 func (a AvalancheProvider) ChannelProof(ctx context.Context, msg provider.ChannelInfo, height uint64) (provider.ChannelProof, error) {
