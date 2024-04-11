@@ -634,13 +634,61 @@ func (a AvalancheProvider) MsgConnectionOpenTry(msgOpenInit provider.ConnectionI
 //}
 
 func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
-	//TODO implement me
-	panic("implement me")
+	csAny, err := clienttypes.PackClientState(proof.ClientState)
+	if err != nil {
+		return nil, err
+	}
+	csBz, err := csAny.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	consensusHeight := proof.ClientState.GetLatestHeight().(clienttypes.Height)
+	consensusHeightBz, err := consensusHeight.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	proofHeightBz, err := proof.ProofHeight.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	msg, err := ibc.PackConnOpenAck(ibc.ConnOpenAckInput{
+		ConnectionID:             msgOpenTry.ConnID,
+		ClientState:              csBz,
+		Version:                  nil,
+		CounterpartyConnectionID: []byte(msgOpenTry.CounterpartyConnID),
+		ProofTry:                 proof.ConnectionStateProof,
+		ProofClient:              proof.ClientStateProof,
+		ProofConsensus:           proof.ConsensusStateProof,
+		ProofHeight:              proofHeightBz,
+		ConsensusHeight:          consensusHeightBz,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return NewEVMMessage(msg), nil
 }
 
 func (a AvalancheProvider) MsgConnectionOpenConfirm(msgOpenAck provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
-	//TODO implement me
-	panic("implement me")
+	proofHeightBz, err := proof.ProofHeight.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	msg, err := ibc.PackConnOpenConfirm(ibc.ConnOpenConfirmInput{
+		ConnectionID: msgOpenAck.ConnID,
+		ProofAck:     proof.ConnectionStateProof,
+		ProofHeight:  proofHeightBz,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewEVMMessage(msg), nil
 }
 
 func (a AvalancheProvider) MsgSubmitMisbehaviour(clientID string, misbehaviour ibcexported.ClientMessage) (provider.RelayerMessage, error) {
@@ -713,7 +761,6 @@ func (a AvalancheProvider) ConnectionProof(ctx context.Context, msgOpenAck provi
 }
 
 func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
-	//TODO implement me
 	counterparty := conntypes.Counterparty{
 		ClientId:     info.CounterpartyClientID,
 		ConnectionId: "",
