@@ -382,7 +382,11 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 
 		persistence.retriesAtLatestQueriedBlock = 0
 
-		latestHeader = ibcHeader.(AvalancheIBCHeader)
+		var ok bool
+		latestHeader, ok = ibcHeader.(AvalancheIBCHeader)
+		if !ok {
+			return fmt.Errorf("bad header: %#v", ibcHeader)
+		}
 
 		heightUint64 := uint64(i)
 

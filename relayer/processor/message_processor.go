@@ -106,7 +106,8 @@ func (mp *messageProcessor) processMessages(
 	if !isLocalhostClient(src.clientState.ClientID, dst.clientState.ClientID) {
 		var err error
 		needsClientUpdate = false
-		//needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
+		// TODO: uncomment next line
+		// needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
 		if err != nil {
 			return err
 		}
