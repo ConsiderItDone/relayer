@@ -3,11 +3,14 @@ package avalanche
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	connectointypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -16,6 +19,8 @@ import (
 
 const (
 	eventClientCreated     = "ClientCreated"
+	eventClientUpdated     = "ClientUpdated"
+	eventClientUpgraded    = "ClientUpgraded"
 	eventConnectionCreated = "ConnectionCreated"
 )
 
@@ -24,6 +29,8 @@ var (
 
 	eventNames = []string{
 		eventClientCreated,
+		eventClientUpdated,
+		eventClientUpgraded,
 		eventConnectionCreated,
 	}
 )
@@ -68,13 +75,39 @@ func (ci *clientInfo) parseAttrs(log *zap.Logger, attributes map[string]string) 
 		switch key {
 		case clienttypes.AttributeKeyClientID:
 			ci.clientID = value
+		case clienttypes.AttributeKeyConsensusHeight:
+			revisionSplit := strings.Split(value, "-")
+			if len(revisionSplit) != 2 {
+				log.Error("Error parsing client consensus height",
+					zap.String("client_id", ci.clientID),
+					zap.String("value", value),
+				)
+			} else {
+				revisionNumberString := revisionSplit[0]
+				revisionNumber, err := strconv.ParseUint(revisionNumberString, 10, 64)
+				if err != nil {
+					log.Error("Error parsing client consensus height revision number",
+						zap.Error(err),
+					)
+				}
+				revisionHeightString := revisionSplit[1]
+				revisionHeight, err := strconv.ParseUint(revisionHeightString, 10, 64)
+				if err != nil {
+					log.Error("Error parsing client consensus height revision height",
+						zap.Error(err),
+					)
+					return
+				}
+				ci.consensusHeight = clienttypes.Height{
+					RevisionNumber: revisionNumber,
+					RevisionHeight: revisionHeight,
+				}
+			}
+		case clienttypes.AttributeKeyHeader:
+			ci.header = []byte(value)
 		}
 	}
 
-	ci.consensusHeight = clienttypes.Height{
-		RevisionNumber: 0,
-		RevisionHeight: ci.Height,
-	}
 }
 
 func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent {
@@ -88,6 +121,31 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 
 			events = append(events, provider.RelayerEvent{
 				EventType:  clienttypes.EventTypeCreateClient,
+				Attributes: attributes,
+			})
+		case eventClientUpdated:
+			attributes := make(map[string]string)
+			attributes[clienttypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[clienttypes.AttributeKeyConsensusHeight] = event.Attributes["consensusHeight"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  clienttypes.EventTypeUpdateClient,
+				Attributes: attributes,
+			})
+		case eventClientUpgraded:
+			attributes := make(map[string]string)
+			attributes[clienttypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[clienttypes.AttributeKeyConsensusHeight] = event.Attributes["consensusHeight"]
+			attributes[clienttypes.AttributeKeyHeader] = event.Attributes["clientMessage"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  clienttypes.EventTypeUpgradeClient,
+				Attributes: attributes,
+			})
+		case eventConnectionCreated:
+			attributes := make(map[string]string)
+			attributes[clienttypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[connectointypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  connectointypes.EventTypeConnectionOpenInit,
 				Attributes: attributes,
 			})
 		}
@@ -164,7 +222,7 @@ func ibcMessagesFromEvents(log *zap.Logger, events []provider.RelayerEvent, heig
 
 func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, height uint64) *ibcMessage {
 	switch event.EventType {
-	case eventClientCreated:
+	case eventClientCreated, eventClientUpdated, eventClientUpgraded:
 		ci := new(clientInfo)
 		ci.parseAttrs(log, event.Attributes)
 		return &ibcMessage{
@@ -172,7 +230,7 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 			info:      ci,
 		}
 	case eventConnectionCreated:
-
+		panic(fmt.Sprintf("TODO implement me parseIBCMessageFromEvent<%s>", eventConnectionCreated))
 	}
 
 	return nil

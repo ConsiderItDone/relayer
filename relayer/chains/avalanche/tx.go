@@ -393,9 +393,30 @@ func (a AvalancheProvider) MsgCreateClient(clientState ibcexported.ClientState, 
 }
 
 func (a AvalancheProvider) MsgUpgradeClient(srcClientId string, consRes *clienttypes.QueryConsensusStateResponse, clientRes *clienttypes.QueryClientStateResponse) (provider.RelayerMessage, error) {
+	clientState, ok := any(clientRes.ClientState).(*tendermint.ClientState)
+	if !ok {
+		return nil, errors.New("unable to cast to tendermint Client State")
+	}
+
+	clientBytes, err := clientState.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	consensusState, ok := any(consRes.ConsensusState).(*tendermint.ConsensusState)
+	if !ok {
+		return nil, errors.New("unable to cast to tendermint Consensus State")
+	}
+	consensusStateBytes, err := consensusState.Marshal()
+	if err != nil {
+		return nil, err
+	}
 	input := ibc.UpgradeClientInput{
-		ClientID:           srcClientId,
-		ProofUpgradeClient: consRes.GetProof(),
+		ClientID:              srcClientId,
+		UpgradedClien:         clientBytes,
+		UpgradedConsState:     consensusStateBytes,
+		ProofUpgradeClient:    consRes.GetProof(),
+		ProofUpgradeConsState: consRes.ConsensusState.Value,
 	}
 	msg, err := ibc.PackUpgradeClient(input)
 	if err != nil {
@@ -762,9 +783,8 @@ func (a AvalancheProvider) ConnectionProof(ctx context.Context, msgOpenAck provi
 
 func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
 	counterparty := conntypes.Counterparty{
-		ClientId:     info.CounterpartyClientID,
-		ConnectionId: "",
-		Prefix:       defaultChainPrefix,
+		ClientId: info.CounterpartyClientID,
+		Prefix:   defaultChainPrefix,
 	}
 
 	counterpartyBytes, err := counterparty.Marshal()
@@ -772,10 +792,13 @@ func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, p
 		return nil, err
 	}
 
+	versionsBytes := []byte{0xa, 0x1, 0x31, 0x12, 0xd, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x5f, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x45, 0x44, 0x12, 0xf, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x5f, 0x55, 0x4e, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x45, 0x44}
+
 	msg, err := ibc.PackConnOpenInit(ibc.ConnOpenInitInput{
 		ClientID:     info.ClientID,
 		Counterparty: counterpartyBytes,
-		Version:      nil,
+		Version:      versionsBytes,
+		DelayPeriod:  defaultDelayPeriod,
 	})
 	if err != nil {
 		return nil, err

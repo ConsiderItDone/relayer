@@ -2,6 +2,7 @@ package avalanche
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"math/big"
@@ -32,6 +33,9 @@ import (
 )
 
 var (
+	//go:embed contract.abi
+	ContractABI string
+
 	_ provider.ChainProvider = &AvalancheProvider{}
 	_ provider.KeyProvider   = &AvalancheProvider{}
 
@@ -122,7 +126,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 		return err
 	}
 
-	abi, err := abi.JSON(strings.NewReader(contract.ContractMetaData.ABI))
+	contractAbi, err := abi.JSON(strings.NewReader(ContractABI))
 	if err != nil {
 		return err
 	}
@@ -143,7 +147,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	}
 
 	a.Keybase = keybase
-	a.abi = abi
+	a.abi = contractAbi
 	a.subnetID = subnetID
 	a.blockchainID = blockchainID
 	a.ibcContract = ibcContract
