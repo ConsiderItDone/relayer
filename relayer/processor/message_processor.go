@@ -96,13 +96,11 @@ func (mp *messageProcessor) processMessages(
 
 	// Localhost IBC does not permit client updates
 	if src.clientState.ClientID != ibcexported.LocalhostClientID && dst.clientState.ClientID != ibcexported.LocalhostConnectionID {
-		// TODO
-		//var err error
-		needsClientUpdate = false
-		//needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
-		//if err != nil {
-		//	return err
-		//}
+		var err error
+		needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
+		if err != nil {
+			return err
+		}
 
 		if err := mp.assembleMsgUpdateClient(ctx, src, dst); err != nil {
 			return err

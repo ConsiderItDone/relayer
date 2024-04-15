@@ -1082,7 +1082,6 @@ func (pp *PathProcessor) processLatestMessages(ctx context.Context, cancel func(
 		return mp.processMessages(ctx, pathEnd1Messages, pp.pathEnd2, pp.pathEnd1)
 	})
 	eg.Go(func() error {
-		return nil
 		mp := newMessageProcessor(pp.log, pp.metrics, pp.memo, pp.clientUpdateThresholdTime, pp.isLocalhost)
 		return mp.processMessages(ctx, pathEnd2Messages, pp.pathEnd1, pp.pathEnd2)
 	})

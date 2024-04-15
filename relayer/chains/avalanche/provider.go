@@ -60,6 +60,9 @@ type AvalancheIBCHeader struct {
 }
 
 func (h AvalancheIBCHeader) Height() uint64 {
+	if h.EthHeader == nil {
+		return 0
+	}
 	return h.EthHeader.Number.Uint64()
 }
 
