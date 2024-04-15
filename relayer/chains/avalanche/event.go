@@ -73,9 +73,9 @@ func (ci *clientInfo) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 func (ci *clientInfo) parseAttrs(log *zap.Logger, attributes map[string]string) {
 	for key, value := range attributes {
 		switch key {
-		case clienttypes.AttributeKeyClientID:
+		case "clientId":
 			ci.clientID = value
-		case clienttypes.AttributeKeyConsensusHeight:
+		case "consensusHeight":
 			revisionSplit := strings.Split(value, "-")
 			if len(revisionSplit) != 2 {
 				log.Error("Error parsing client consensus height",
@@ -102,8 +102,9 @@ func (ci *clientInfo) parseAttrs(log *zap.Logger, attributes map[string]string) 
 					RevisionNumber: revisionNumber,
 					RevisionHeight: revisionHeight,
 				}
+				ci.Height = revisionHeight
 			}
-		case clienttypes.AttributeKeyHeader:
+		case "clientMessage":
 			ci.header = []byte(value)
 		}
 	}
@@ -225,6 +226,7 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 	case eventClientCreated, eventClientUpdated, eventClientUpgraded:
 		ci := new(clientInfo)
 		ci.parseAttrs(log, event.Attributes)
+		log.Debug("parse attrs", zap.Object("ci", ci))
 		return &ibcMessage{
 			eventType: event.EventType,
 			info:      ci,
