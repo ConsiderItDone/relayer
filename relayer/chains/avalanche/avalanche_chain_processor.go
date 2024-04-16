@@ -12,8 +12,6 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
-	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -37,40 +35,14 @@ type latestClientState map[string]provider.ClientState
 
 func (l latestClientState) update(ctx context.Context, clientInfo clientInfo, acp *AvalancheChainProcessor) {
 	existingClientInfo, ok := l[clientInfo.clientID]
-	var trustingPeriod time.Duration
-	if ok {
-		if clientInfo.consensusHeight.LT(existingClientInfo.ConsensusHeight) {
-			// height is less than latest, so no-op
-			return
-		}
-		trustingPeriod = existingClientInfo.TrustingPeriod
+	if ok && clientInfo.consensusHeight.LT(existingClientInfo.ConsensusHeight) {
+		// height is less than latest, so no-op
+		return
 	}
-	if trustingPeriod == 0 {
-		cs, err := acp.chainProvider.QueryClientState(ctx, 0, clientInfo.clientID)
-		if err != nil {
-			acp.log.Error(
-				"Failed to query client state to get trusting period",
-				zap.String("client_id", clientInfo.clientID),
-				zap.Error(err),
-			)
-			return
-		}
-		switch cs.(type) {
-		// tendermint client state
-		case *tmclient.ClientState:
-			trustingPeriod = cs.(*tmclient.ClientState).TrustingPeriod
-		case *avalanche.ClientState:
-			trustingPeriod = cs.(*avalanche.ClientState).TrustingPeriod
-		default:
-			acp.log.Error(
-				fmt.Sprintf("unknown client state type, got(%T)", cs),
-				zap.String("client_id", clientInfo.clientID),
-				zap.Error(err),
-			)
-			return
-		}
-	}
-	clientState := clientInfo.ClientState(trustingPeriod)
+
+	// TODO: don't hardcode
+	tp := time.Hour * 2
+	clientState := clientInfo.ClientState(tp)
 
 	// update latest if no existing state or provided consensus height is newer
 	l[clientInfo.clientID] = clientState

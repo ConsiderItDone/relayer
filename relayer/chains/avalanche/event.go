@@ -259,7 +259,7 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 		ci = new(clientInfo)
 		ci.parseAttrs(log, event.Attributes)
 	case eventConnectionCreated:
-		ci = new(connectionInfo)
+		ci = &connectionInfo{Height: height}
 		ci.parseAttrs(log, event.Attributes)
 	}
 
