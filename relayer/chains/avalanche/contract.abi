@@ -278,6 +278,18 @@
         "internalType": "string",
         "name": "connectionId",
         "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "counterpartyClientID",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "counterpartyConnectionId",
+        "type": "string"
       }
     ],
     "name": "ConnectionCreated",

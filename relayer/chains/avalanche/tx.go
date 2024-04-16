@@ -161,19 +161,65 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 		return errors.New("empty messages")
 	}
 
-	msg := msgs[0]
+	var (
+		ln                = len(msgs)
+		last              = ln - 1
+		waiter            = make(chan struct{}, 1)
+		callbackResponses = make([]*provider.RelayerTxResponse, ln)
+		callbackErrors    = make([]error, ln)
+	)
 
-	input, err := msg.MsgBytes()
-	if err != nil {
-		return err
-	}
-	signedTx, err := a.signTx(input)
-	if err != nil {
-		return err
+	callback := func(id int) []func(*provider.RelayerTxResponse, error) {
+		return []func(*provider.RelayerTxResponse, error){
+			func(resp *provider.RelayerTxResponse, err error) {
+				callbackResponses[id] = resp
+				callbackErrors[id] = err
+				<-waiter
+			},
+		}
 	}
 
-	if err := a.broadcastTx(ctx, signedTx, asyncCtx, asyncCallbacks); err != nil {
-		return err
+	for i := range msgs {
+		waiter <- struct{}{}
+
+		input, err := msgs[i].MsgBytes()
+		if err != nil {
+			return err
+		}
+
+		signedTx, err := a.signTx(input)
+		if err != nil {
+			return err
+		}
+
+		err = a.broadcastTx(ctx, signedTx, asyncCtx, callback(i))
+		if err != nil {
+			return err
+		}
+	}
+	waiter <- struct{}{}
+	close(waiter)
+
+	err := errors.Join(callbackErrors...)
+	res := &provider.RelayerTxResponse{
+		Height:    callbackResponses[last].Height,
+		TxHash:    callbackResponses[last].TxHash,
+		Codespace: callbackResponses[last].Codespace,
+		Code:      callbackResponses[last].Code,
+		Data:      callbackResponses[last].Data,
+		Events:    make([]provider.RelayerEvent, 0),
+	}
+
+	for i := range callbackResponses {
+		if callbackResponses[i] != nil && len(callbackResponses[i].Events) > 0 {
+			res.Events = append(res.Events, callbackResponses[i].Events...)
+		}
+	}
+
+	if len(asyncCallbacks) > 0 {
+		for _, cb := range asyncCallbacks {
+			cb(res, err)
+		}
 	}
 
 	return nil

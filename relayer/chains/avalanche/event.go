@@ -111,6 +111,35 @@ func (ci *clientInfo) parseAttrs(log *zap.Logger, attributes map[string]string) 
 
 }
 
+type connectionInfo provider.ConnectionInfo
+
+func (res *connectionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("connection_id", res.ConnID)
+	enc.AddString("client_id", res.ClientID)
+	enc.AddString("counterparty_connection_id", res.CounterpartyConnID)
+	enc.AddString("counterparty_client_id", res.CounterpartyClientID)
+	return nil
+}
+
+func (res *connectionInfo) parseAttrs(log *zap.Logger, attributes map[string]string) {
+	for name, value := range attributes {
+		res.parseConnectionAttribute(name, value)
+	}
+}
+
+func (res *connectionInfo) parseConnectionAttribute(name, value string) {
+	switch name {
+	case "clientId":
+		res.ClientID = value
+	case "connectionId":
+		res.ConnID = value
+	case "counterpartyClientID":
+		res.CounterpartyClientID = value
+	case "counterpartyConnectionId":
+		res.CounterpartyConnID = value
+	}
+}
+
 func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent {
 	var events []provider.RelayerEvent
 
@@ -145,6 +174,8 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 			attributes := make(map[string]string)
 			attributes[clienttypes.AttributeKeyClientID] = event.Attributes["clientId"]
 			attributes[connectointypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[connectointypes.AttributeKeyCounterpartyClientID] = event.Attributes["counterpartyClientID"]
+			attributes[connectointypes.AttributeKeyCounterpartyConnectionID] = event.Attributes["counterpartyConnectionId"]
 			events = append(events, provider.RelayerEvent{
 				EventType:  connectointypes.EventTypeConnectionOpenInit,
 				Attributes: attributes,
@@ -222,18 +253,20 @@ func ibcMessagesFromEvents(log *zap.Logger, events []provider.RelayerEvent, heig
 }
 
 func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, height uint64) *ibcMessage {
+	var ci ibcMessageInfo
 	switch event.EventType {
 	case eventClientCreated, eventClientUpdated, eventClientUpgraded:
-		ci := new(clientInfo)
+		ci = new(clientInfo)
 		ci.parseAttrs(log, event.Attributes)
-		log.Debug("Parse IBC message", zap.String("event", event.EventType), zap.Object("ci", ci))
-		return &ibcMessage{
-			eventType: event.EventType,
-			info:      ci,
-		}
 	case eventConnectionCreated:
-		panic(fmt.Sprintf("TODO implement me parseIBCMessageFromEvent<%s>", eventConnectionCreated))
+		ci = new(connectionInfo)
+		ci.parseAttrs(log, event.Attributes)
 	}
 
-	return nil
+	log.Debug("Parse IBC message", zap.String("event", event.EventType), zap.Object("ci", ci))
+
+	return &ibcMessage{
+		eventType: event.EventType,
+		info:      ci,
+	}
 }
