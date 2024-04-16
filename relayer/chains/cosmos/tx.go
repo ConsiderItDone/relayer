@@ -41,10 +41,12 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	localhost "github.com/cosmos/ibc-go/v7/modules/light-clients/09-localhost"
+	avaclient "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/cosmos/relayer/v2/relayer/chains/avalanche"
 	strideicqtypes "github.com/cosmos/relayer/v2/relayer/chains/cosmos/stride"
 	"github.com/cosmos/relayer/v2/relayer/ethermint"
 	"github.com/cosmos/relayer/v2/relayer/provider"
@@ -1248,33 +1250,55 @@ func (cc *CosmosProvider) MsgChannelCloseConfirm(msgCloseInit provider.ChannelIn
 
 func (cc *CosmosProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader, trustedHeight clienttypes.Height, trustedHeader provider.IBCHeader) (ibcexported.ClientMessage, error) {
 	trustedCosmosHeader, ok := trustedHeader.(provider.TendermintIBCHeader)
-	if !ok {
-		return nil, fmt.Errorf("unsupported IBC trusted header type, expected: TendermintIBCHeader, actual: %T", trustedHeader)
+	if ok {
+		latestCosmosHeader, ok := latestHeader.(provider.TendermintIBCHeader)
+		if !ok {
+			return nil, fmt.Errorf("unsupported IBC header type, expected: TendermintIBCHeader, actual: %T", latestHeader)
+		}
+
+		trustedValidatorsProto, err := trustedCosmosHeader.ValidatorSet.ToProto()
+		if err != nil {
+			return nil, fmt.Errorf("error converting trusted validators to proto object: %w", err)
+		}
+
+		signedHeaderProto := latestCosmosHeader.SignedHeader.ToProto()
+
+		validatorSetProto, err := latestCosmosHeader.ValidatorSet.ToProto()
+		if err != nil {
+			return nil, fmt.Errorf("error converting validator set to proto object: %w", err)
+		}
+
+		return &tmclient.Header{
+			SignedHeader:      signedHeaderProto,
+			ValidatorSet:      validatorSetProto,
+			TrustedValidators: trustedValidatorsProto,
+			TrustedHeight:     trustedHeight,
+		}, nil
 	}
 
-	latestCosmosHeader, ok := latestHeader.(provider.TendermintIBCHeader)
-	if !ok {
-		return nil, fmt.Errorf("unsupported IBC header type, expected: TendermintIBCHeader, actual: %T", latestHeader)
+	trustedAvalancheHeader, ok := trustedHeader.(avalanche.AvalancheIBCHeader)
+	if ok {
+
+		return &avaclient.Header{
+			PrevSubnetHeader: nil,
+			SubnetHeader: &avaclient.SubnetHeader{
+				Height:       nil,
+				Timestamp:    time.Unix(int64(trustedAvalancheHeader.EthHeader.Time), 0),
+				BlockHash:    trustedAvalancheHeader.EthHeader.Hash().Bytes(),
+				PchainHeight: nil,
+				PchainVdrs:   nil,
+			},
+			PchainHeader:       nil,
+			StorageRoot:        nil,
+			SignedStorageRoot:  nil,
+			ValidatorSet:       nil,
+			SignedValidatorSet: nil,
+			Vdrs:               nil,
+			SignersInput:       nil,
+		}, nil
 	}
 
-	trustedValidatorsProto, err := trustedCosmosHeader.ValidatorSet.ToProto()
-	if err != nil {
-		return nil, fmt.Errorf("error converting trusted validators to proto object: %w", err)
-	}
-
-	signedHeaderProto := latestCosmosHeader.SignedHeader.ToProto()
-
-	validatorSetProto, err := latestCosmosHeader.ValidatorSet.ToProto()
-	if err != nil {
-		return nil, fmt.Errorf("error converting validator set to proto object: %w", err)
-	}
-
-	return &tmclient.Header{
-		SignedHeader:      signedHeaderProto,
-		ValidatorSet:      validatorSetProto,
-		TrustedValidators: trustedValidatorsProto,
-		TrustedHeight:     trustedHeight,
-	}, nil
+	return nil, fmt.Errorf("unsupported IBC trusted header type, expected: TendermintIBCHeader or AvalancheIBCHeader, actual: %T", trustedHeader)
 }
 
 func (cc *CosmosProvider) QueryICQWithProof(ctx context.Context, path string, request []byte, height uint64) (provider.ICQProof, error) {

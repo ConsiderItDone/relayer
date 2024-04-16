@@ -226,7 +226,7 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 	case eventClientCreated, eventClientUpdated, eventClientUpgraded:
 		ci := new(clientInfo)
 		ci.parseAttrs(log, event.Attributes)
-		log.Debug("parse attrs", zap.Object("ci", ci))
+		log.Debug("Parse IBC message", zap.String("event", event.EventType), zap.Object("ci", ci))
 		return &ibcMessage{
 			eventType: event.EventType,
 			info:      ci,
