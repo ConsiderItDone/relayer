@@ -1332,7 +1332,6 @@ func (cc *CosmosProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader,
 
 	trustedAvalancheHeader, ok := trustedHeader.(avalanche.AvalancheIBCHeader)
 	if ok {
-
 		return &avaclient.Header{
 			PrevSubnetHeader: nil,
 			SubnetHeader: &avaclient.SubnetHeader{
