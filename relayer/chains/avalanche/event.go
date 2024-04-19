@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
@@ -18,10 +20,19 @@ import (
 )
 
 const (
-	eventClientCreated     = "ClientCreated"
-	eventClientUpdated     = "ClientUpdated"
-	eventClientUpgraded    = "ClientUpgraded"
-	eventConnectionCreated = "ConnectionCreated"
+	eventClientCreated         = "ClientCreated"
+	eventClientUpdated         = "ClientUpdated"
+	eventClientUpgraded        = "ClientUpgraded"
+	eventConnectionOpenInit    = "ConnectionOpenInit"
+	eventConnectionOpenTry     = "ConnectionOpenTry"
+	eventConnectionOpenAck     = "ConnectionOpenAck"
+	eventConnectionOpenConfirm = "ConnectionOpenConfirm"
+	eventChannelOpenInit       = "ChannelOpenInit"
+	eventChannelOpenTry        = "ChannelOpenTry"
+	eventChannelOpenAck        = "ChannelOpenAck"
+	eventChannelOpenConfirm    = "ChannelOpenConfirm"
+	eventChannelCloseInit      = "ChannelCloseInit"
+	eventChannelCloseConfirm   = "ChannelCloseConfirm"
 )
 
 var (
@@ -31,7 +42,32 @@ var (
 		eventClientCreated,
 		eventClientUpdated,
 		eventClientUpgraded,
-		eventConnectionCreated,
+		eventConnectionOpenInit,
+		eventConnectionOpenTry,
+		eventConnectionOpenAck,
+		eventConnectionOpenConfirm,
+		eventChannelOpenInit,
+		eventChannelOpenTry,
+		eventChannelOpenAck,
+		eventChannelOpenConfirm,
+		eventChannelCloseInit,
+		eventChannelCloseConfirm,
+	}
+
+	connEventsTransform = map[string]string{
+		eventConnectionOpenInit:    connectointypes.EventTypeConnectionOpenInit,
+		eventConnectionOpenTry:     connectointypes.EventTypeConnectionOpenTry,
+		eventConnectionOpenAck:     connectointypes.EventTypeConnectionOpenAck,
+		eventConnectionOpenConfirm: connectointypes.EventTypeConnectionOpenConfirm,
+	}
+
+	chanEventsTransform = map[string]string{
+		eventChannelOpenInit:     channeltypes.EventTypeChannelOpenInit,
+		eventChannelOpenTry:      channeltypes.EventTypeChannelOpenTry,
+		eventChannelOpenAck:      channeltypes.EventTypeChannelOpenAck,
+		eventChannelOpenConfirm:  channeltypes.EventTypeChannelOpenConfirm,
+		eventChannelCloseInit:    channeltypes.EventTypeChannelCloseInit,
+		eventChannelCloseConfirm: channeltypes.EventTypeChannelCloseConfirm,
 	}
 )
 
@@ -140,6 +176,43 @@ func (res *connectionInfo) parseConnectionAttribute(name, value string) {
 	}
 }
 
+type channelInfo provider.ChannelInfo
+
+func (res *channelInfo) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("channel_id", res.ChannelID)
+	enc.AddString("port_id", res.PortID)
+	enc.AddString("counterparty_channel_id", res.CounterpartyChannelID)
+	enc.AddString("counterparty_port_id", res.CounterpartyPortID)
+	return nil
+}
+
+func (res *channelInfo) parseAttrs(log *zap.Logger, attributes map[string]string) {
+	for name, value := range attributes {
+		res.parseChannelAttribute(name, value)
+	}
+}
+
+// parseChannelAttribute parses channel attributes from an event.
+// If the attribute has already been parsed into the channelInfo,
+// it will not overwrite, and return true to inform the caller that
+// the attribute already exists.
+func (res *channelInfo) parseChannelAttribute(name, value string) {
+	switch name {
+	case "connectionId":
+		res.ConnID = value
+	case "channelId":
+		res.ChannelID = value
+	case "portId":
+		res.PortID = value
+	case "counterpartyChannelId":
+		res.CounterpartyChannelID = value
+	case "counterpartyPortID":
+		res.CounterpartyPortID = value
+	case "version":
+		res.Version = value
+	}
+}
+
 func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent {
 	var events []provider.RelayerEvent
 
@@ -170,14 +243,110 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 				EventType:  clienttypes.EventTypeUpgradeClient,
 				Attributes: attributes,
 			})
-		case eventConnectionCreated:
+		case eventConnectionOpenInit:
 			attributes := make(map[string]string)
-			attributes[clienttypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[connectointypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[connectointypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[connectointypes.AttributeKeyCounterpartyClientID] = event.Attributes["counterpartyClientID"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  connectointypes.EventTypeConnectionOpenInit,
+				Attributes: attributes,
+			})
+		case eventConnectionOpenTry:
+			attributes := make(map[string]string)
+			attributes[connectointypes.AttributeKeyClientID] = event.Attributes["clientId"]
 			attributes[connectointypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
 			attributes[connectointypes.AttributeKeyCounterpartyClientID] = event.Attributes["counterpartyClientID"]
 			attributes[connectointypes.AttributeKeyCounterpartyConnectionID] = event.Attributes["counterpartyConnectionId"]
 			events = append(events, provider.RelayerEvent{
-				EventType:  connectointypes.EventTypeConnectionOpenInit,
+				EventType:  connectointypes.EventTypeConnectionOpenTry,
+				Attributes: attributes,
+			})
+		case eventConnectionOpenAck:
+			attributes := make(map[string]string)
+			attributes[connectointypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[connectointypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[connectointypes.AttributeKeyCounterpartyClientID] = event.Attributes["counterpartyClientID"]
+			attributes[connectointypes.AttributeKeyCounterpartyConnectionID] = event.Attributes["counterpartyConnectionId"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  connectointypes.EventTypeConnectionOpenAck,
+				Attributes: attributes,
+			})
+		case eventConnectionOpenConfirm:
+			attributes := make(map[string]string)
+			attributes[connectointypes.AttributeKeyClientID] = event.Attributes["clientId"]
+			attributes[connectointypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[connectointypes.AttributeKeyCounterpartyClientID] = event.Attributes["counterpartyClientID"]
+			attributes[connectointypes.AttributeKeyCounterpartyConnectionID] = event.Attributes["counterpartyConnectionId"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  connectointypes.EventTypeConnectionOpenConfirm,
+				Attributes: attributes,
+			})
+		case eventChannelOpenInit:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[channeltypes.AttributeKeyChannelID] = event.Attributes["channelId"]
+			attributes[channeltypes.AttributeKeyPortID] = event.Attributes["portId"]
+			attributes[channeltypes.AttributeCounterpartyPortID] = event.Attributes["counterpartyPortID"]
+			attributes[channeltypes.AttributeVersion] = event.Attributes["version"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelOpenInit,
+				Attributes: attributes,
+			})
+		case eventChannelOpenTry:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[channeltypes.AttributeKeyChannelID] = event.Attributes["channelId"]
+			attributes[channeltypes.AttributeKeyPortID] = event.Attributes["portId"]
+			attributes[channeltypes.AttributeCounterpartyChannelID] = event.Attributes["counterpartyChannelId"]
+			attributes[channeltypes.AttributeCounterpartyPortID] = event.Attributes["counterpartyPortID"]
+			attributes[channeltypes.AttributeVersion] = event.Attributes["version"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelOpenTry,
+				Attributes: attributes,
+			})
+		case eventChannelOpenAck:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[channeltypes.AttributeKeyChannelID] = event.Attributes["channelId"]
+			attributes[channeltypes.AttributeKeyPortID] = event.Attributes["portId"]
+			attributes[channeltypes.AttributeCounterpartyChannelID] = event.Attributes["counterpartyChannelId"]
+			attributes[channeltypes.AttributeCounterpartyPortID] = event.Attributes["counterpartyPortID"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelOpenAck,
+				Attributes: attributes,
+			})
+		case eventChannelOpenConfirm:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[channeltypes.AttributeKeyChannelID] = event.Attributes["channelId"]
+			attributes[channeltypes.AttributeKeyPortID] = event.Attributes["portId"]
+			attributes[channeltypes.AttributeCounterpartyChannelID] = event.Attributes["counterpartyChannelId"]
+			attributes[channeltypes.AttributeCounterpartyPortID] = event.Attributes["counterpartyPortID"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelOpenConfirm,
+				Attributes: attributes,
+			})
+		case eventChannelCloseInit:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[channeltypes.AttributeKeyChannelID] = event.Attributes["channelId"]
+			attributes[channeltypes.AttributeKeyPortID] = event.Attributes["portId"]
+			attributes[channeltypes.AttributeCounterpartyChannelID] = event.Attributes["counterpartyChannelId"]
+			attributes[channeltypes.AttributeCounterpartyPortID] = event.Attributes["counterpartyPortID"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseInit,
+				Attributes: attributes,
+			})
+		case eventChannelCloseConfirm:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionId"]
+			attributes[channeltypes.AttributeKeyChannelID] = event.Attributes["channelId"]
+			attributes[channeltypes.AttributeKeyPortID] = event.Attributes["portId"]
+			attributes[channeltypes.AttributeCounterpartyChannelID] = event.Attributes["counterpartyChannelId"]
+			attributes[channeltypes.AttributeCounterpartyPortID] = event.Attributes["counterpartyPortID"]
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
 				Attributes: attributes,
 			})
 		}
@@ -254,19 +423,24 @@ func ibcMessagesFromEvents(log *zap.Logger, events []provider.RelayerEvent, heig
 
 func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, height uint64) *ibcMessage {
 	var ci ibcMessageInfo
+	var eventType string = event.EventType
 	switch event.EventType {
 	case eventClientCreated, eventClientUpdated, eventClientUpgraded:
 		ci = new(clientInfo)
 		ci.parseAttrs(log, event.Attributes)
-	case eventConnectionCreated:
+	case eventConnectionOpenInit, eventConnectionOpenTry, eventConnectionOpenAck, eventConnectionOpenConfirm:
 		ci = &connectionInfo{Height: height}
 		ci.parseAttrs(log, event.Attributes)
+		eventType = connEventsTransform[eventType]
+	case eventChannelOpenInit, eventChannelOpenTry, eventChannelOpenAck, eventChannelOpenConfirm, eventChannelCloseInit, eventChannelCloseConfirm:
+		ci = &channelInfo{Height: height}
+		ci.parseAttrs(log, event.Attributes)
+		eventType = chanEventsTransform[eventType]
 	}
 
-	log.Debug("Parse IBC message", zap.String("event", event.EventType), zap.Object("ci", ci))
-
+	log.Debug("Parse IBC message", zap.String("event", eventType), zap.Object("ci", ci))
 	return &ibcMessage{
-		eventType: event.EventType,
+		eventType: eventType,
 		info:      ci,
 	}
 }
