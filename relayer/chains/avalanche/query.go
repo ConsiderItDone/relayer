@@ -279,8 +279,28 @@ func (a AvalancheProvider) QueryChannelClient(ctx context.Context, height int64,
 }
 
 func (a AvalancheProvider) QueryConnectionChannels(ctx context.Context, height int64, connectionid string) ([]*chantypes.IdentifiedChannel, error) {
-	//TODO implement me
-	panic("implement me")
+	// TODO add method QueryConnectionChannels to subnet
+	rawChannel, err := a.ibcContract.QueryChannel(&bind.CallOpts{BlockNumber: big.NewInt(height)}, "port-id", connectionid)
+	if err != nil {
+		return nil, err
+	}
+
+	var channel chantypes.Channel
+	if err := channel.Unmarshal(rawChannel); err != nil {
+		return nil, err
+	}
+
+	return []*chantypes.IdentifiedChannel{
+		{
+			State:          channel.State,
+			Ordering:       channel.Ordering,
+			Counterparty:   channel.Counterparty,
+			ConnectionHops: channel.ConnectionHops,
+			Version:        channel.Version,
+			PortId:         channel.Counterparty.PortId,
+			ChannelId:      channel.Counterparty.ChannelId,
+		},
+	}, nil
 }
 
 func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.IdentifiedChannel, error) {
