@@ -2,6 +2,7 @@ package avalanche
 
 import (
 	"context"
+	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	"go.uber.org/zap"
@@ -16,6 +17,8 @@ func (acp *AvalancheChainProcessor) handleMessage(ctx context.Context, m ibcMess
 		acp.handleClientMessage(ctx, m.eventType, *t)
 	case *connectionInfo:
 		acp.handleConnectionMessage(m.eventType, provider.ConnectionInfo(*t), c)
+	case *channelInfo:
+		acp.handleChannelMessage(m.eventType, provider.ChannelInfo(*t), c)
 	}
 }
 
@@ -50,6 +53,53 @@ func (acp *AvalancheChainProcessor) handleConnectionMessage(eventType string, ci
 	ibcMessagesCache.ConnectionHandshake.Retain(connectionKey, eventType, ci)
 
 	acp.logConnectionMessage(eventType, ci)
+}
+
+func (acp *AvalancheChainProcessor) handleChannelMessage(eventType string, ci provider.ChannelInfo, ibcMessagesCache processor.IBCMessagesCache) {
+	acp.channelConnections[ci.ChannelID] = ci.ConnID
+	channelKey := processor.ChannelInfoChannelKey(ci)
+
+	if eventType == chantypes.EventTypeChannelOpenInit {
+		found := false
+		for k := range acp.channelStateCache {
+			// Don't add a channelKey to the channelStateCache without counterparty channel ID
+			// since we already have the channelKey in the channelStateCache which includes the
+			// counterparty channel ID.
+			if k.MsgInitKey() == channelKey {
+				found = true
+				break
+			}
+		}
+		if !found {
+			acp.channelStateCache.SetOpen(channelKey, false, ci.Order)
+		}
+	} else {
+		switch eventType {
+		case chantypes.EventTypeChannelOpenTry:
+			acp.channelStateCache.SetOpen(channelKey, false, ci.Order)
+		case chantypes.EventTypeChannelOpenAck, chantypes.EventTypeChannelOpenConfirm:
+			acp.channelStateCache.SetOpen(channelKey, true, ci.Order)
+			acp.logChannelOpenMessage(eventType, ci)
+		case chantypes.EventTypeChannelCloseConfirm:
+			for k := range acp.channelStateCache {
+				if k.PortID == ci.PortID && k.ChannelID == ci.ChannelID {
+					acp.channelStateCache.SetOpen(channelKey, false, ci.Order)
+					break
+				}
+			}
+		}
+		// Clear out MsgInitKeys once we have the counterparty channel ID
+		delete(acp.channelStateCache, channelKey.MsgInitKey())
+	}
+}
+
+func (acp *AvalancheChainProcessor) logChannelOpenMessage(message string, ci provider.ChannelInfo) {
+	fields := []zap.Field{
+		zap.String("channel_id", ci.ChannelID),
+		zap.String("connection_id", ci.ConnID),
+		zap.String("port_id", ci.PortID),
+	}
+	acp.log.Info("Successfully created new channel", fields...)
 }
 
 func (acp *AvalancheChainProcessor) logConnectionMessage(message string, ci provider.ConnectionInfo) {
