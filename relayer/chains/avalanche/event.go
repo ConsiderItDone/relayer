@@ -144,7 +144,6 @@ func (ci *clientInfo) parseAttrs(log *zap.Logger, attributes map[string]string) 
 			ci.header = []byte(value)
 		}
 	}
-
 }
 
 type connectionInfo provider.ConnectionInfo
@@ -426,7 +425,7 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 	var eventType string = event.EventType
 	switch event.EventType {
 	case eventClientCreated, eventClientUpdated, eventClientUpgraded:
-		ci = new(clientInfo)
+		ci = &clientInfo{Height: height}
 		ci.parseAttrs(log, event.Attributes)
 	case eventConnectionOpenInit, eventConnectionOpenTry, eventConnectionOpenAck, eventConnectionOpenConfirm:
 		ci = &connectionInfo{Height: height}
