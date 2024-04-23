@@ -33,6 +33,13 @@ const (
 	eventChannelOpenConfirm    = "ChannelOpenConfirm"
 	eventChannelCloseInit      = "ChannelCloseInit"
 	eventChannelCloseConfirm   = "ChannelCloseConfirm"
+
+	eventPacketSendPacket           = "SendPacket"
+	eventPacketRecvPacket           = "RecvPacket"
+	eventPacketWriteAck             = "WriteAck"
+	eventPacketAcknowledgePacket    = "AcknowledgePacket"
+	eventPacketTimeoutPacket        = "TimeoutPacket"
+	eventPacketTimeoutPacketOnClose = "TimeoutPacketOnClose"
 )
 
 var (
@@ -52,6 +59,12 @@ var (
 		eventChannelOpenConfirm,
 		eventChannelCloseInit,
 		eventChannelCloseConfirm,
+		eventPacketSendPacket,
+		eventPacketRecvPacket,
+		eventPacketWriteAck,
+		eventPacketAcknowledgePacket,
+		eventPacketTimeoutPacket,
+		eventPacketTimeoutPacketOnClose,
 	}
 
 	connEventsTransform = map[string]string{
@@ -68,6 +81,15 @@ var (
 		eventChannelOpenConfirm:  channeltypes.EventTypeChannelOpenConfirm,
 		eventChannelCloseInit:    channeltypes.EventTypeChannelCloseInit,
 		eventChannelCloseConfirm: channeltypes.EventTypeChannelCloseConfirm,
+	}
+
+	packetEventsTransform = map[string]string{
+		eventPacketSendPacket:           channeltypes.EventTypeSendPacket,
+		eventPacketRecvPacket:           channeltypes.EventTypeRecvPacket,
+		eventPacketWriteAck:             channeltypes.EventTypeWriteAck,
+		eventPacketAcknowledgePacket:    channeltypes.EventTypeAcknowledgePacket,
+		eventPacketTimeoutPacket:        channeltypes.EventTypeTimeoutPacket,
+		eventPacketTimeoutPacketOnClose: channeltypes.EventTypeTimeoutPacketOnClose,
 	}
 )
 
@@ -213,6 +235,86 @@ func (res *channelInfo) parseChannelAttribute(name, value string) {
 	}
 }
 
+type packetInfo provider.PacketInfo
+
+func (res *packetInfo) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddUint64("sequence", res.Sequence)
+	enc.AddString("src_channel", res.SourceChannel)
+	enc.AddString("src_port", res.SourcePort)
+	enc.AddString("dst_channel", res.DestChannel)
+	enc.AddString("dst_port", res.DestPort)
+	return nil
+}
+
+// parsePacketInfo is treated differently from the others since it can be constructed from the accumulation of multiple events
+func (res *packetInfo) parseAttrs(log *zap.Logger, attributes map[string]string) {
+	for name, value := range attributes {
+		res.parseChannelAttribute(log, name, value)
+	}
+}
+
+func (res *packetInfo) parseChannelAttribute(log *zap.Logger, name, value string) {
+	var err error
+	switch name {
+	case "sequence":
+		res.Sequence, err = strconv.ParseUint(value, 10, 64)
+	case "timeoutTimestamp":
+		res.TimeoutTimestamp, err = strconv.ParseUint(value, 10, 64)
+	case "data":
+		res.Data = []byte(value)
+	case "ack":
+		res.Ack = []byte(value)
+	case "timeoutHeight":
+		timeoutSplit := strings.Split(value, "-")
+		if len(timeoutSplit) != 2 {
+			log.Error("Error parsing packet height timeout",
+				zap.Uint64("sequence", res.Sequence),
+				zap.String("value", value),
+			)
+			return
+		}
+		revisionNumber, err := strconv.ParseUint(timeoutSplit[0], 10, 64)
+		if err != nil {
+			log.Error("Error parsing packet timeout height revision number",
+				zap.Uint64("sequence", res.Sequence),
+				zap.String("value", timeoutSplit[0]),
+				zap.Error(err),
+			)
+			return
+		}
+		revisionHeight, err := strconv.ParseUint(timeoutSplit[1], 10, 64)
+		if err != nil {
+			log.Error("Error parsing packet timeout height revision height",
+				zap.Uint64("sequence", res.Sequence),
+				zap.String("value", timeoutSplit[1]),
+				zap.Error(err),
+			)
+			return
+		}
+		res.TimeoutHeight = clienttypes.Height{
+			RevisionNumber: revisionNumber,
+			RevisionHeight: revisionHeight,
+		}
+	case "sourcePort":
+		res.SourcePort = value
+	case "sourceChannel":
+		res.SourceChannel = value
+	case "destPort":
+		res.DestPort = value
+	case "destChannel":
+		res.DestChannel = value
+	case "channelOrdering":
+		res.ChannelOrder = value
+	}
+	if err != nil {
+		log.Error("Error parsing packet info",
+			zap.String("name", name),
+			zap.String("value", value),
+			zap.Error(err),
+		)
+	}
+}
+
 func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent {
 	var events []provider.RelayerEvent
 
@@ -349,6 +451,49 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 				EventType:  channeltypes.EventTypeChannelCloseConfirm,
 				Attributes: attributes,
 			})
+		case eventPacketSendPacket:
+			attributes := make(map[string]string)
+			attributes[channeltypes.AttributeKeyData] = event.Attributes["data"]
+			// TODO add transformation
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				Attributes: attributes,
+			})
+		case eventPacketRecvPacket:
+			attributes := make(map[string]string)
+			// TODO add transformation
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				Attributes: attributes,
+			})
+		case eventPacketWriteAck:
+			attributes := make(map[string]string)
+			// TODO add transformation
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				Attributes: attributes,
+			})
+		case eventPacketAcknowledgePacket:
+			attributes := make(map[string]string)
+			// TODO add transformation
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				Attributes: attributes,
+			})
+		case eventPacketTimeoutPacket:
+			attributes := make(map[string]string)
+			// TODO add transformation
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				Attributes: attributes,
+			})
+		case eventPacketTimeoutPacketOnClose:
+			attributes := make(map[string]string)
+			// TODO add transformation
+			events = append(events, provider.RelayerEvent{
+				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				Attributes: attributes,
+			})
 		}
 	}
 
@@ -436,6 +581,10 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 		ci = &channelInfo{Height: height}
 		ci.parseAttrs(log, event.Attributes)
 		eventType = chanEventsTransform[eventType]
+	case eventPacketSendPacket, eventPacketRecvPacket, eventPacketWriteAck, eventPacketAcknowledgePacket, eventPacketTimeoutPacket, eventPacketTimeoutPacketOnClose:
+		ci = &packetInfo{Height: height}
+		ci.parseAttrs(log, event.Attributes)
+		eventType = packetEventsTransform[eventType]
 	}
 
 	log.Debug("Parse IBC message", zap.String("event", eventType), zap.Object("ci", ci))
