@@ -3,6 +3,7 @@ package avalanche
 import (
 	"context"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	"go.uber.org/zap/zapcore"
 
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	"go.uber.org/zap"
@@ -19,6 +20,8 @@ func (acp *AvalancheChainProcessor) handleMessage(ctx context.Context, m ibcMess
 		acp.handleConnectionMessage(m.eventType, provider.ConnectionInfo(*t), c)
 	case *channelInfo:
 		acp.handleChannelMessage(m.eventType, provider.ChannelInfo(*t), c)
+	case *packetInfo:
+		acp.handlePacketMessage(m.eventType, provider.PacketInfo(*t), c)
 	}
 }
 
@@ -91,6 +94,64 @@ func (acp *AvalancheChainProcessor) handleChannelMessage(eventType string, ci pr
 		// Clear out MsgInitKeys once we have the counterparty channel ID
 		delete(acp.channelStateCache, channelKey.MsgInitKey())
 	}
+}
+
+func (acp *AvalancheChainProcessor) handlePacketMessage(eventType string, pi provider.PacketInfo, c processor.IBCMessagesCache) {
+	k, err := processor.PacketInfoChannelKey(eventType, pi)
+	if err != nil {
+		acp.log.Error("Unexpected error handling packet message",
+			zap.String("event_type", eventType),
+			zap.Uint64("sequence", pi.Sequence),
+			zap.Inline(k),
+			zap.Error(err),
+		)
+		return
+	}
+
+	if eventType == chantypes.EventTypeTimeoutPacket && pi.ChannelOrder == chantypes.ORDERED.String() {
+		acp.channelStateCache.SetOpen(k, false, chantypes.ORDERED)
+	}
+
+	if !c.PacketFlow.ShouldRetainSequence(acp.pathProcessors, k, acp.chainProvider.ChainId(), eventType, pi.Sequence) {
+		acp.log.Debug("Not retaining packet message",
+			zap.String("event_type", eventType),
+			zap.Uint64("sequence", pi.Sequence),
+			zap.Inline(k),
+		)
+		return
+	}
+
+	acp.log.Debug("Retaining packet message",
+		zap.String("event_type", eventType),
+		zap.Uint64("sequence", pi.Sequence),
+		zap.Inline(k),
+	)
+
+	c.PacketFlow.Retain(k, eventType, pi)
+	acp.logPacketMessage(eventType, pi)
+}
+
+func (acp *AvalancheChainProcessor) logPacketMessage(message string, pi provider.PacketInfo) {
+	if !acp.log.Core().Enabled(zapcore.DebugLevel) {
+		return
+	}
+	fields := []zap.Field{
+		zap.Uint64("sequence", pi.Sequence),
+		zap.String("src_channel", pi.SourceChannel),
+		zap.String("src_port", pi.SourcePort),
+		zap.String("dst_channel", pi.DestChannel),
+		zap.String("dst_port", pi.DestPort),
+	}
+	if pi.TimeoutHeight.RevisionHeight > 0 {
+		fields = append(fields, zap.Uint64("timeout_height", pi.TimeoutHeight.RevisionHeight))
+	}
+	if pi.TimeoutHeight.RevisionNumber > 0 {
+		fields = append(fields, zap.Uint64("timeout_height_revision", pi.TimeoutHeight.RevisionNumber))
+	}
+	if pi.TimeoutTimestamp > 0 {
+		fields = append(fields, zap.Uint64("timeout_timestamp", pi.TimeoutTimestamp))
+	}
+	acp.logObservedIBCMessage(message, fields...)
 }
 
 func (acp *AvalancheChainProcessor) logChannelOpenMessage(message string, ci provider.ChannelInfo) {
