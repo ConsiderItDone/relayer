@@ -141,6 +141,8 @@ func (mp *messageProcessor) shouldUpdateClientNow(ctx context.Context, src, dst 
 	if dst.clientState.ConsensusTime.IsZero() {
 		h, err := src.chainProvider.QueryIBCHeader(ctx, int64(dst.clientState.ConsensusHeight.RevisionHeight))
 		if err != nil {
+			// TODO
+			return false, nil
 			return false, fmt.Errorf("failed to get header height: %w", err)
 		}
 		consensusHeightTime = time.Unix(0, int64(h.ConsensusState().GetTimestamp()))

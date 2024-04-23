@@ -424,6 +424,12 @@
         "internalType": "string",
         "name": "clientId",
         "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "consensusHeight",
+        "type": "string"
       }
     ],
     "name": "ClientCreated",
