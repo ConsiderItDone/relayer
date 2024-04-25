@@ -22,6 +22,7 @@ import (
 	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	avaclient "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
@@ -818,8 +819,67 @@ func (a AvalancheProvider) CommitmentPrefix() commitmenttypes.MerklePrefix {
 }
 
 func (a AvalancheProvider) ConnectionHandshakeProof(ctx context.Context, msgOpenInit provider.ConnectionInfo, height uint64) (provider.ConnectionProof, error) {
-	//TODO implement me
-	panic("implement me")
+	clientState, err := a.QueryClientState(ctx, int64(height), msgOpenInit.ClientID)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to query client state at height %d: %w", height, err)
+	}
+
+	//header, err := a.QueryIBCHeader(ctx, int64(height))
+	//if err != nil {
+	//	return provider.ConnectionProof{}, fmt.Errorf("unable to query header at height %d: %w", height, err)
+	//}
+	//avaHeader, ok := header.(AvalancheIBCHeader)
+	//if !ok {
+	//	return provider.ConnectionProof{}, fmt.Errorf("unsupported IBC header type, expected: AvalancheIBCHeader, actual: %T", header)
+	//}
+
+	clientStateSlot := ibc.ClientStateSlot(msgOpenInit.ClientID).Hex()
+	consensusStateSlot := ibc.ConsensusStateSlot(msgOpenInit.ClientID, clientState.GetLatestHeight()).Hex()
+	connectionSlot := ibc.ConnectionSlot(msgOpenInit.ConnID).Hex()
+
+	proofs, err := a.subnetClient.GetProof(ctx, ibc.ContractAddress, []string{clientStateSlot, consensusStateSlot, connectionSlot}, big.NewInt(int64(height)))
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to query avalanche proofs (%s) at height %d: %w", msgOpenInit.ClientID, height, err)
+	}
+
+	clientStateProof, err := proofToBytes(proofs.StorageProof[0].Proof)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to convert client state proof to bytes: %w", err)
+	}
+
+	consensusStateProof, err := proofToBytes(proofs.StorageProof[1].Proof)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to convert consensus state proof to bytes: %w", err)
+	}
+
+	connStateProof, err := proofToBytes(proofs.StorageProof[2].Proof)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to convert connection proof to bytes: %w", err)
+	}
+
+	return provider.ConnectionProof{
+		ClientState:          clientState,
+		ClientStateProof:     clientStateProof,
+		ConsensusStateProof:  consensusStateProof,
+		ConnectionStateProof: connStateProof,
+		ProofHeight: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: height,
+		},
+	}, nil
+}
+
+func proofToBytes(proofs []string) ([]byte, error) {
+	var result []byte
+	for _, proofStr := range proofs {
+		proof, err := hexutil.Decode(proofStr)
+		if err != nil {
+			return result, fmt.Errorf("unable to convert proof to bytes: %w", err)
+		}
+		result = append(result, proof...)
+	}
+
+	return result, nil
 }
 
 func (a AvalancheProvider) ConnectionProof(ctx context.Context, msgOpenAck provider.ConnectionInfo, height uint64) (provider.ConnectionProof, error) {
@@ -865,21 +925,38 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 	}
 
 	return &avaclient.Header{
-		PrevSubnetHeader: nil,
+		PrevSubnetHeader: &avaclient.SubnetHeader{
+			Height: &clienttypes.Height{
+				RevisionNumber: 0,
+				RevisionHeight: trustedAvalancheHeader.Height() - 1, // TODO
+			},
+			Timestamp:    time.Time{},
+			BlockHash:    nil,
+			PchainHeight: nil,
+			PchainVdrs:   nil,
+		},
 		SubnetHeader: &avaclient.SubnetHeader{
-			Height:       nil,
+			Height: &clienttypes.Height{
+				RevisionNumber: 0,
+				RevisionHeight: trustedAvalancheHeader.Height(),
+			},
 			Timestamp:    time.Unix(int64(trustedAvalancheHeader.EthHeader.Time), 0),
 			BlockHash:    trustedAvalancheHeader.EthHeader.Hash().Bytes(),
 			PchainHeight: nil,
 			PchainVdrs:   nil,
 		},
-		PchainHeader:       nil,
-		StorageRoot:        nil,
-		SignedStorageRoot:  nil,
-		ValidatorSet:       nil,
-		SignedValidatorSet: nil,
-		Vdrs:               nil,
-		SignersInput:       nil,
+		PchainHeader: &avaclient.PchainHeader{
+			Height: &clienttypes.Height{
+				RevisionNumber: 0,
+				RevisionHeight: trustedAvalancheHeader.PChainHeight,
+			},
+		},
+		StorageRoot:        trustedAvalancheHeader.EthHeader.Root.Bytes(),
+		SignedStorageRoot:  trustedAvalancheHeader.SignedStorageRoot[:],
+		ValidatorSet:       trustedAvalancheHeader.ValidatorSet,
+		SignedValidatorSet: trustedAvalancheHeader.SignedValidatorSet[:],
+		Vdrs:               trustedAvalancheHeader.Vdrs,
+		SignersInput:       trustedAvalancheHeader.SignersInput,
 	}, nil
 }
 
