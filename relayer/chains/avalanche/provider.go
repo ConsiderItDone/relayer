@@ -57,6 +57,7 @@ type AvalancheIBCHeader struct {
 	ValidatorSet       []byte
 	Vdrs               []*avalanche.Validator
 	SignersInput       []byte
+	PChainHeight       uint64
 }
 
 func (h AvalancheIBCHeader) Height() uint64 {

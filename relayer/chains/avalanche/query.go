@@ -48,10 +48,16 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 		return nil, err
 	}
 
-	validatorSet, vdrs, err := a.avalancheValidatorSet(ctx, ethHeader.Number.Uint64())
+	validatorSet, vdrs, pChainHeight, err := a.avalancheValidatorSet(ctx, ethHeader.Number.Uint64())
 
 	signedStorageRoot, _, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
+	if err != nil {
+		return nil, err
+	}
 	signedValidatorSet, signers, err := a.avalancheBlsSignature(ctx, validatorSet)
+	if err != nil {
+		return nil, err
+	}
 
 	return AvalancheIBCHeader{
 		EthHeader:          ethHeader,
@@ -60,21 +66,22 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 		ValidatorSet:       validatorSet,
 		Vdrs:               vdrs,
 		SignersInput:       signers,
+		PChainHeight:       pChainHeight,
 	}, nil
 
 }
 
-func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight uint64) ([]byte, []*avalanche.Validator, error) {
+func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight uint64) ([]byte, []*avalanche.Validator, uint64, error) {
 	// query P-Chain block number by EVM height
 	pChainHeight, err := a.ibcClient.GetPChainHeight(ctx, evmHeight)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	// query P-Chain validators at specific height
 	vdrSet, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, pChainHeight)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	vdrs := make(map[string]*Validator, len(vdrSet))
@@ -83,7 +90,7 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 			continue
 		}
 
-		pkBytes := bls.SerializePublicKey(vdr.PublicKey)
+		pkBytes := bls.PublicKeyToBytes(vdr.PublicKey)
 		uniqueVdr, ok := vdrs[string(pkBytes)]
 		if !ok {
 			uniqueVdr = &Validator{
@@ -115,12 +122,12 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 	for _, vldr := range avaVldrs {
 		data, err := vldr.Marshal()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, 0, err
 		}
 		avaVldrsBz = append(avaVldrsBz, data...)
 	}
 
-	return avaVldrsBz, avaVldrs, nil
+	return avaVldrsBz, avaVldrs, pChainHeight, nil
 }
 
 func (a AvalancheProvider) avalancheBlsSignature(ctx context.Context, payloadData []byte) ([bls.SignatureLen]byte, []byte, error) {
