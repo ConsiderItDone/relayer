@@ -34,12 +34,12 @@ const (
 	eventChannelCloseInit      = "ChannelCloseInit"
 	eventChannelCloseConfirm   = "ChannelCloseConfirm"
 
-	eventPacketSendPacket           = "PacketSent"
-	eventPacketRecvPacket           = "PacketRecv"
-	eventPacketWriteAck             = "WriteAck"
-	eventPacketAcknowledgePacket    = "AckPacket"
-	eventPacketTimeoutPacket        = "TimeoutPacket"
-	eventPacketTimeoutPacketOnClose = "TimeoutPacketOnClose"
+	eventPacketSendPacket        = "PacketSent"
+	eventPacketRecvPacket        = "PacketRecv"
+	eventPacketWriteAck          = "WriteAck"
+	eventPacketAcknowledgePacket = "AckPacket"
+	eventPacketTimeoutPacket     = "TimeoutPacket"
+	//eventPacketTimeoutPacketOnClose = "TimeoutPacketOnClose"
 )
 
 var (
@@ -64,7 +64,7 @@ var (
 		eventPacketWriteAck,
 		eventPacketAcknowledgePacket,
 		eventPacketTimeoutPacket,
-		eventPacketTimeoutPacketOnClose,
+		//eventPacketTimeoutPacketOnClose,
 	}
 
 	connEventsTransform = map[string]string{
@@ -84,12 +84,12 @@ var (
 	}
 
 	packetEventsTransform = map[string]string{
-		eventPacketSendPacket:           channeltypes.EventTypeSendPacket,
-		eventPacketRecvPacket:           channeltypes.EventTypeRecvPacket,
-		eventPacketWriteAck:             channeltypes.EventTypeWriteAck,
-		eventPacketAcknowledgePacket:    channeltypes.EventTypeAcknowledgePacket,
-		eventPacketTimeoutPacket:        channeltypes.EventTypeTimeoutPacket,
-		eventPacketTimeoutPacketOnClose: channeltypes.EventTypeTimeoutPacketOnClose,
+		eventPacketSendPacket:        channeltypes.EventTypeSendPacket,
+		eventPacketRecvPacket:        channeltypes.EventTypeRecvPacket,
+		eventPacketWriteAck:          channeltypes.EventTypeWriteAck,
+		eventPacketAcknowledgePacket: channeltypes.EventTypeAcknowledgePacket,
+		eventPacketTimeoutPacket:     channeltypes.EventTypeTimeoutPacket,
+		//eventPacketTimeoutPacketOnClose: channeltypes.EventTypeTimeoutPacketOnClose,
 	}
 )
 
@@ -536,23 +536,23 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 				EventType:  channeltypes.EventTypeChannelCloseConfirm,
 				Attributes: attributes,
 			})
-		case eventPacketTimeoutPacketOnClose:
-			attributes := make(map[string]string)
-			attributes[channeltypes.AttributeKeyData] = event.Attributes["data"]
-			attributes[channeltypes.AttributeKeyTimeoutHeight] = event.Attributes["timeoutHeight"]
-			attributes[channeltypes.AttributeKeyTimeoutTimestamp] = event.Attributes["timeoutTimestamp"]
-			attributes[channeltypes.AttributeKeySequence] = event.Attributes["sequence"]
-			attributes[channeltypes.AttributeKeySrcPort] = event.Attributes["sourcePort"]
-			attributes[channeltypes.AttributeKeySrcChannel] = event.Attributes["sourceChannel"]
-			attributes[channeltypes.AttributeKeyDstPort] = event.Attributes["destPort"]
-			attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
-			attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
-			attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
-			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
-			events = append(events, provider.RelayerEvent{
-				EventType:  channeltypes.EventTypeChannelCloseConfirm,
-				Attributes: attributes,
-			})
+			//case eventPacketTimeoutPacketOnClose:
+			//		attributes := make(map[string]string)
+			//		attributes[channeltypes.AttributeKeyData] = event.Attributes["data"]
+			//		attributes[channeltypes.AttributeKeyTimeoutHeight] = event.Attributes["timeoutHeight"]
+			//		attributes[channeltypes.AttributeKeyTimeoutTimestamp] = event.Attributes["timeoutTimestamp"]
+			//		attributes[channeltypes.AttributeKeySequence] = event.Attributes["sequence"]
+			//		attributes[channeltypes.AttributeKeySrcPort] = event.Attributes["sourcePort"]
+			//		attributes[channeltypes.AttributeKeySrcChannel] = event.Attributes["sourceChannel"]
+			//		attributes[channeltypes.AttributeKeyDstPort] = event.Attributes["destPort"]
+			//		attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
+			//		attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
+			//		attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
+			//		attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
+			//		events = append(events, provider.RelayerEvent{
+			//			EventType:  channeltypes.EventTypeChannelCloseConfirm,
+			//			Attributes: attributes,
+			//		})
 		}
 	}
 
@@ -640,7 +640,7 @@ func parseIBCMessageFromEvent(log *zap.Logger, event provider.RelayerEvent, heig
 		ci = &channelInfo{Height: height}
 		ci.parseAttrs(log, event.Attributes)
 		eventType = chanEventsTransform[eventType]
-	case eventPacketSendPacket, eventPacketRecvPacket, eventPacketWriteAck, eventPacketAcknowledgePacket, eventPacketTimeoutPacket, eventPacketTimeoutPacketOnClose:
+	case eventPacketSendPacket, eventPacketRecvPacket, eventPacketWriteAck, eventPacketAcknowledgePacket, eventPacketTimeoutPacket: //eventPacketTimeoutPacketOnClose:
 		ci = &packetInfo{Height: height}
 		ci.parseAttrs(log, event.Attributes)
 		eventType = packetEventsTransform[eventType]
