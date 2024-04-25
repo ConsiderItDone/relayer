@@ -943,7 +943,7 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 			Timestamp:    time.Unix(int64(trustedAvalancheHeader.EthHeader.Time), 0),
 			BlockHash:    trustedAvalancheHeader.EthHeader.Hash().Bytes(),
 			PchainHeight: nil,
-			PchainVdrs:   nil,
+			PchainVdrs:   trustedAvalancheHeader.Vdrs,
 		},
 		PchainHeader: &avaclient.PchainHeader{
 			Height: &clienttypes.Height{
