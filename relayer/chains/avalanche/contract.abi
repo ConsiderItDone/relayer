@@ -57,7 +57,7 @@
         "type": "string"
       }
     ],
-    "name": "AcknowledgePacket",
+    "name": "AckPacket",
     "type": "event"
   },
   {
@@ -119,73 +119,6 @@
       }
     ],
     "name": "AcknowledgementError",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "timeoutHeight",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timeoutTimestamp",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "sequence",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "sourcePort",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "sourceChannel",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "destPort",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "destChannel",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "ack",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "connectionID",
-        "type": "string"
-      }
-    ],
-    "name": "AcknowledgementWritten",
     "type": "event"
   },
   {
@@ -424,6 +357,12 @@
         "internalType": "string",
         "name": "clientId",
         "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "consensusHeight",
+        "type": "string"
       }
     ],
     "name": "ClientCreated",
@@ -647,9 +586,15 @@
         "internalType": "int32",
         "name": "channelOrdering",
         "type": "int32"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "connection",
+        "type": "string"
       }
     ],
-    "name": "PacketReceived",
+    "name": "PacketRecv",
     "type": "event"
   },
   {
@@ -708,6 +653,12 @@
         "internalType": "int32",
         "name": "channelOrdering",
         "type": "int32"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "connection",
+        "type": "string"
       }
     ],
     "name": "PacketSent",
@@ -859,6 +810,73 @@
       }
     ],
     "name": "WarpIBCMessage",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "timeoutHeight",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timeoutTimestamp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sequence",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "sourcePort",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "sourceChannel",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "destPort",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "destChannel",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "ack",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "connectionID",
+        "type": "string"
+      }
+    ],
+    "name": "WriteAck",
     "type": "event"
   },
   {
