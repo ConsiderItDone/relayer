@@ -864,7 +864,7 @@ func (a AvalancheProvider) ConnectionHandshakeProof(ctx context.Context, msgOpen
 		ConnectionStateProof: connStateProof,
 		ProofHeight: clienttypes.Height{
 			RevisionNumber: 0,
-			RevisionHeight: height,
+			RevisionHeight: msgOpenInit.Height,
 		},
 	}, nil
 }
@@ -927,8 +927,8 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 	return &avaclient.Header{
 		PrevSubnetHeader: &avaclient.SubnetHeader{
 			Height: &clienttypes.Height{
-				RevisionNumber: 0,
-				RevisionHeight: trustedAvalancheHeader.Height() - 1, // TODO
+				RevisionNumber: trustedHeight.RevisionNumber,
+				RevisionHeight: trustedHeight.RevisionHeight - 1,
 			},
 			Timestamp:    time.Time{},
 			BlockHash:    nil,
@@ -936,10 +936,7 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 			PchainVdrs:   nil,
 		},
 		SubnetHeader: &avaclient.SubnetHeader{
-			Height: &clienttypes.Height{
-				RevisionNumber: 0,
-				RevisionHeight: trustedAvalancheHeader.Height(),
-			},
+			Height:       &trustedHeight,
 			Timestamp:    time.Unix(int64(trustedAvalancheHeader.EthHeader.Time), 0),
 			BlockHash:    trustedAvalancheHeader.EthHeader.Hash().Bytes(),
 			PchainHeight: nil,
