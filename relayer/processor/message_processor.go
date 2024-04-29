@@ -11,6 +11,7 @@ import (
 	legacyerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 
 	"go.uber.org/zap"
@@ -314,6 +315,13 @@ func (mp *messageProcessor) assembleMsgUpdateClient(ctx context.Context, src, ds
 		trustedConsensusHeight,
 		dst.clientTrustedState.IBCHeader,
 	)
+	// avalanche
+	if src.info.ChainID == "99999" {
+		avaHeader := msgUpdateClientHeader.(*avaclient.Header)
+		mp.log.Info("constructed MsgUpdateClientHeader from avalanche for cosmos",
+			zap.String("subnet_header", avaHeader.SubnetHeader.Height.String()),
+		)
+	}
 	if err != nil {
 		return fmt.Errorf("error assembling new client header: %w", err)
 	}

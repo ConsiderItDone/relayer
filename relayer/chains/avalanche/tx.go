@@ -919,16 +919,24 @@ func (a AvalancheProvider) ChannelProof(ctx context.Context, msg provider.Channe
 }
 
 func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader, trustedHeight clienttypes.Height, trustedHeader provider.IBCHeader) (ibcexported.ClientMessage, error) {
-	trustedAvalancheHeader, ok := trustedHeader.(AvalancheIBCHeader)
+	//trustedAvalancheHeader, ok := trustedHeader.(AvalancheIBCHeader)
+	//if !ok {
+	//	return nil, fmt.Errorf("unsupported IBC trusted header type, expected: AvalancheIBCHeader, actual: %T", trustedHeader)
+	//}
+
+	latestAvalancheHeader, ok := latestHeader.(AvalancheIBCHeader)
 	if !ok {
-		return nil, fmt.Errorf("unsupported IBC trusted header type, expected: AvalancheIBCHeader, actual: %T", trustedHeader)
+		return nil, fmt.Errorf("unsupported IBC latest header type, expected: AvalancheIBCHeader, actual: %T", trustedHeader)
 	}
+
+	latestAvalancheHeight := latestAvalancheHeader.Height()
+	//trustedAvalancheHeight := trustedAvalancheHeader.Height()
 
 	return &avaclient.Header{
 		PrevSubnetHeader: &avaclient.SubnetHeader{
 			Height: &clienttypes.Height{
-				RevisionNumber: trustedHeight.RevisionNumber,
-				RevisionHeight: trustedHeight.RevisionHeight - 1,
+				RevisionNumber: 0,
+				RevisionHeight: latestAvalancheHeight - 1,
 			},
 			Timestamp:    time.Time{},
 			BlockHash:    nil,
@@ -936,24 +944,27 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 			PchainVdrs:   nil,
 		},
 		SubnetHeader: &avaclient.SubnetHeader{
-			Height:       &trustedHeight,
-			Timestamp:    time.Unix(int64(trustedAvalancheHeader.EthHeader.Time), 0),
-			BlockHash:    trustedAvalancheHeader.EthHeader.Hash().Bytes(),
+			Height: &clienttypes.Height{
+				RevisionNumber: 0,
+				RevisionHeight: latestAvalancheHeight,
+			},
+			Timestamp:    time.Unix(int64(latestAvalancheHeader.EthHeader.Time), 0),
+			BlockHash:    latestAvalancheHeader.EthHeader.Hash().Bytes(),
 			PchainHeight: nil,
-			PchainVdrs:   trustedAvalancheHeader.Vdrs,
+			PchainVdrs:   latestAvalancheHeader.Vdrs,
 		},
 		PchainHeader: &avaclient.PchainHeader{
 			Height: &clienttypes.Height{
 				RevisionNumber: 0,
-				RevisionHeight: trustedAvalancheHeader.PChainHeight,
+				RevisionHeight: latestAvalancheHeader.PChainHeight,
 			},
 		},
-		StorageRoot:        trustedAvalancheHeader.EthHeader.Root.Bytes(),
-		SignedStorageRoot:  trustedAvalancheHeader.SignedStorageRoot[:],
-		ValidatorSet:       trustedAvalancheHeader.ValidatorSet,
-		SignedValidatorSet: trustedAvalancheHeader.SignedValidatorSet[:],
-		Vdrs:               trustedAvalancheHeader.Vdrs,
-		SignersInput:       trustedAvalancheHeader.SignersInput,
+		StorageRoot:        latestAvalancheHeader.EthHeader.Root.Bytes(),
+		SignedStorageRoot:  latestAvalancheHeader.SignedStorageRoot[:],
+		ValidatorSet:       latestAvalancheHeader.ValidatorSet,
+		SignedValidatorSet: latestAvalancheHeader.SignedValidatorSet[:],
+		Vdrs:               latestAvalancheHeader.Vdrs,
+		SignersInput:       latestAvalancheHeader.SignersInput,
 	}, nil
 }
 
