@@ -41,7 +41,7 @@ func (a AvalancheProvider) SendMessage(ctx context.Context, msg provider.Relayer
 func (a AvalancheProvider) broadcastTx(
 	ctx context.Context, // context for tx broadcast
 	signedTx *evmtypes.Transaction,
-	asyncCtx context.Context, // context for async wait for block inclusion after successful tx broadcast
+	asyncCtx context.Context,                                  // context for async wait for block inclusion after successful tx broadcast
 	asyncCallbacks []func(*provider.RelayerTxResponse, error), // callback for success/fail of the wait for block inclusion
 ) error {
 	err := a.ethClient.SendTransaction(ctx, signedTx)
@@ -723,10 +723,12 @@ func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionIn
 		return nil, err
 	}
 
+	versionsBytes := []byte{0xa, 0x1, 0x31, 0x12, 0xd, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x5f, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x45, 0x44, 0x12, 0xf, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x5f, 0x55, 0x4e, 0x4f, 0x52, 0x44, 0x45, 0x52, 0x45, 0x44}
+
 	msg, err := ibc.PackConnOpenAck(ibc.ConnOpenAckInput{
 		ConnectionID:             msgOpenTry.ConnID,
 		ClientState:              csBz,
-		Version:                  nil,
+		Version:                  versionsBytes,
 		CounterpartyConnectionID: []byte(msgOpenTry.CounterpartyConnID),
 		ProofTry:                 proof.ConnectionStateProof,
 		ProofClient:              proof.ClientStateProof,
@@ -884,8 +886,45 @@ func proofToBytes(proofs []string) ([]byte, error) {
 }
 
 func (a AvalancheProvider) ConnectionProof(ctx context.Context, msgOpenAck provider.ConnectionInfo, height uint64) (provider.ConnectionProof, error) {
-	//TODO implement me
-	panic("implement me")
+	clientState, err := a.QueryClientState(ctx, int64(height), msgOpenAck.ClientID)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to query client state at height %d: %w", height, err)
+	}
+
+	clientStateSlot := ibc.ClientStateSlot(msgOpenAck.ClientID).Hex()
+	consensusStateSlot := ibc.ConsensusStateSlot(msgOpenAck.ClientID, clientState.GetLatestHeight()).Hex()
+	connectionSlot := ibc.ConnectionSlot(msgOpenAck.ConnID).Hex()
+
+	proofs, err := a.subnetClient.GetProof(ctx, ibc.ContractAddress, []string{clientStateSlot, consensusStateSlot, connectionSlot}, big.NewInt(int64(height)))
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to query avalanche proofs (%s) at height %d: %w", msgOpenAck.ClientID, height, err)
+	}
+
+	clientStateProof, err := proofToBytes(proofs.StorageProof[0].Proof)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to convert client state proof to bytes: %w", err)
+	}
+
+	consensusStateProof, err := proofToBytes(proofs.StorageProof[1].Proof)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to convert consensus state proof to bytes: %w", err)
+	}
+
+	connStateProof, err := proofToBytes(proofs.StorageProof[2].Proof)
+	if err != nil {
+		return provider.ConnectionProof{}, fmt.Errorf("unable to convert connection proof to bytes: %w", err)
+	}
+
+	return provider.ConnectionProof{
+		ClientState:          clientState,
+		ClientStateProof:     clientStateProof,
+		ConsensusStateProof:  consensusStateProof,
+		ConnectionStateProof: connStateProof,
+		ProofHeight: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: msgOpenAck.Height,
+		},
+	}, nil
 }
 
 func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
