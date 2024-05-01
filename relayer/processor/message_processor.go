@@ -11,6 +11,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	tmclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	avaclient "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -296,6 +297,12 @@ func (mp *messageProcessor) assembleMsgUpdateClient(ctx context.Context, src, ds
 		avaHeader := msgUpdateClientHeader.(*avaclient.Header)
 		mp.log.Info("constructed MsgUpdateClientHeader from avalanche for cosmos",
 			zap.String("subnet_header", avaHeader.SubnetHeader.Height.String()),
+		)
+	}
+	if src.info.ChainID == "ibc-1" {
+		tmHeader := msgUpdateClientHeader.(*tmclient.Header)
+		mp.log.Info("constructed MsgUpdateClientHeader from cosmos for avalanche",
+			zap.Int64("height", tmHeader.Header.Height),
 		)
 	}
 	if err != nil {

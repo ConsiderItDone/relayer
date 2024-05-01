@@ -355,6 +355,22 @@ func (pp *PathProcessor) Run(ctx context.Context, cancel func()) {
 		}
 
 		if !pp.pathEnd1.inSync || !pp.pathEnd2.inSync {
+			var networkName string
+			var chainId string
+
+			if !pp.pathEnd1.inSync {
+				chainId = pp.pathEnd1.info.ChainID
+			}
+			if !pp.pathEnd2.inSync {
+				chainId = pp.pathEnd2.info.ChainID
+			}
+			if chainId == "99999" {
+				networkName = "Avalanche"
+			}
+			if chainId == "ibc-1" {
+				networkName = "Cosmos"
+			}
+			pp.log.Debug(fmt.Sprintf("%s network is not synced", networkName))
 			continue
 		}
 
