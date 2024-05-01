@@ -385,7 +385,7 @@ func (a AvalancheProvider) NewClientState(
 
 	trustLevel := avaclient.Fraction{
 		Numerator:   1,
-		Denominator: 3,
+		Denominator: 5,
 	}
 
 	// Create the ClientState we want on 'c' tracking 'dst'
@@ -702,11 +702,12 @@ func (a AvalancheProvider) MsgConnectionOpenTry(msgOpenInit provider.ConnectionI
 //}
 
 func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
-	csAny, err := clienttypes.PackClientState(proof.ClientState)
-	if err != nil {
-		return nil, err
+	avaClientState, ok := proof.ClientState.(*avaclient.ClientState)
+	if !ok {
+		return nil, fmt.Errorf("unsupported Client State type, expected: Avalanche ClientState, actual: %T", proof.ClientState)
 	}
-	csBz, err := csAny.Marshal()
+
+	csBz, err := avaClientState.Marshal()
 	if err != nil {
 		return nil, err
 	}

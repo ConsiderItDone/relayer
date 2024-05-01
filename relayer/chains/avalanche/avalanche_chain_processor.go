@@ -269,13 +269,10 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 	// used at the end of the cycle to send signal to path processors to start processing if both chains are in sync and no new messages came in this cycle
 	firstTimeInSync := false
 
-	ppChanged := false
-
 	if !acp.inSync {
 		if (persistence.latestHeight - persistence.latestQueriedBlock) < inSyncNumBlocksThreshold {
 			acp.inSync = true
 			firstTimeInSync = true
-			ppChanged = true
 			acp.log.Info("Chain is in sync")
 		} else {
 			acp.log.Info("Chain is not yet in sync",
@@ -288,6 +285,8 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 	ibcMessagesCache := processor.NewIBCMessagesCache()
 
 	ibcHeaderCache := make(processor.IBCHeaderCache)
+
+	ppChanged := false
 
 	var latestHeader AvalancheIBCHeader
 
@@ -399,7 +398,7 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 		newLatestQueriedBlock = i
 	}
 
-	if newLatestQueriedBlock == persistence.latestQueriedBlock && !firstTimeInSync {
+	if newLatestQueriedBlock == persistence.latestQueriedBlock /*&& !firstTimeInSync */ {
 		return nil
 	}
 
