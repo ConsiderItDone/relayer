@@ -2,6 +2,7 @@ package avalanche
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math/big"
 	"time"
@@ -261,7 +262,31 @@ func (a AvalancheProvider) QueryConnection(ctx context.Context, height int64, co
 	panic("implement me")
 }
 
-func (a AvalancheProvider) QueryConnections(ctx context.Context) (conns []*conntypes.IdentifiedConnection, err error) {
+func (a AvalancheProvider) QueryConnections(ctx context.Context) ([]*conntypes.IdentifiedConnection, error) {
+	rawConnections, err := a.ibcContract.QueryConnectionAll(nil)
+	if err != nil {
+		return nil, err
+	}
+	var rawdata [][]byte
+	if err := json.Unmarshal(rawConnections, &rawdata); err != nil {
+		return nil, err
+	}
+	conns := make([]*conntypes.IdentifiedConnection, len(rawdata))
+	for i := range rawdata {
+		var conn conntypes.ConnectionEnd
+		if err := conn.Unmarshal(rawdata[i]); err != nil {
+			return nil, err
+		}
+		conns[i] = &conntypes.IdentifiedConnection{
+			Id:           conn.Counterparty.ConnectionId,
+			ClientId:     conn.ClientId,
+			Versions:     conn.Versions,
+			State:        conn.State,
+			Counterparty: conn.Counterparty,
+			DelayPeriod:  conn.DelayPeriod,
+		}
+	}
+
 	return conns, nil
 }
 

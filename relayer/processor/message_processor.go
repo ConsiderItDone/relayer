@@ -322,7 +322,7 @@ func (mp *messageProcessor) assembleMsgUpdateClient(ctx context.Context, src, ds
 			zap.String("subnet_header", avaHeader.SubnetHeader.Height.String()),
 		)
 	}
-	if src.info.ChainID == "ibc-1" {
+	if src.info.ChainID == "ibcgo" {
 		tmHeader := msgUpdateClientHeader.(*tmclient.Header)
 		mp.log.Info("constructed MsgUpdateClientHeader from cosmos for avalanche",
 			zap.Int64("height", tmHeader.Header.Height),
