@@ -367,7 +367,7 @@ func (pp *PathProcessor) Run(ctx context.Context, cancel func()) {
 			if chainId == "99999" {
 				networkName = "Avalanche"
 			}
-			if chainId == "ibc-1" {
+			if chainId == "ibcgo" {
 				networkName = "Cosmos"
 			}
 			pp.log.Debug(fmt.Sprintf("%s network is not synced", networkName))
