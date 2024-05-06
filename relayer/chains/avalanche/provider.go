@@ -29,7 +29,7 @@ import (
 	"github.com/ava-labs/subnet-evm/ethclient/subnetevmclient"
 
 	"github.com/cosmos/relayer/v2/relayer/provider"
-	IBC "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
+	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 )
 
 var (
@@ -98,7 +98,7 @@ type AvalancheProvider struct {
 	abi          abi.ABI
 	subnetID     ids.ID
 	blockchainID ids.ID
-	ibcContract  *IBC.IBC
+	ibcContract  *ibccontract.IBC
 }
 
 func (a *AvalancheProvider) Init(ctx context.Context) error {
@@ -127,7 +127,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 		return err
 	}
 
-	contractAbi, err := abi.JSON(strings.NewReader(IBC.IBCABI))
+	contractAbi, err := abi.JSON(strings.NewReader(ibccontract.IBCABI))
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 		return err
 	}
 
-	ibcContract, err := IBC.NewIBC(ibc.ContractAddress, a.ethClient)
+	ibcContract, err := ibccontract.NewIBC(ibc.ContractAddress, a.ethClient)
 	if err != nil {
 		return err
 	}
