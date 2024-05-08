@@ -94,6 +94,20 @@ func (acp *AvalancheChainProcessor) handleChannelMessage(eventType string, ci pr
 		// Clear out MsgInitKeys once we have the counterparty channel ID
 		delete(acp.channelStateCache, channelKey.MsgInitKey())
 	}
+
+	ibcMessagesCache.ChannelHandshake.Retain(channelKey, eventType, ci)
+
+	acp.logChannelMessage(eventType, ci)
+}
+
+func (ccp *AvalancheChainProcessor) logChannelMessage(message string, ci provider.ChannelInfo) {
+	ccp.logObservedIBCMessage(message,
+		zap.String("channel_id", ci.ChannelID),
+		zap.String("port_id", ci.PortID),
+		zap.String("counterparty_channel_id", ci.CounterpartyChannelID),
+		zap.String("counterparty_port_id", ci.CounterpartyPortID),
+		zap.String("connection_id", ci.ConnID),
+	)
 }
 
 func (acp *AvalancheChainProcessor) handlePacketMessage(eventType string, pi provider.PacketInfo, c processor.IBCMessagesCache) {
