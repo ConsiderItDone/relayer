@@ -954,8 +954,35 @@ func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, p
 }
 
 func (a AvalancheProvider) ChannelProof(ctx context.Context, msg provider.ChannelInfo, height uint64) (provider.ChannelProof, error) {
-	//TODO implement me
-	panic("implement me")
+	rawdata, err := a.ibcContract.QueryChannel(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(height)}, msg.PortID, msg.ChannelID)
+	if err != nil {
+		return provider.ChannelProof{}, err
+	}
+	var ch chantypes.Channel
+	if err := ch.Unmarshal(rawdata); err != nil {
+		return provider.ChannelProof{}, err
+	}
+
+	chSlot := ibc.ChannelSlot(msg.PortID, msg.ChannelID).Hex()
+	proofs, err := a.subnetClient.GetProof(ctx, ibc.ContractAddress, []string{chSlot}, new(big.Int).SetUint64(height))
+	if err != nil {
+		return provider.ChannelProof{}, err
+	}
+
+	chProof, err := proofToBytes(proofs.StorageProof[0].Proof)
+	if err != nil {
+		return provider.ChannelProof{}, err
+	}
+
+	return provider.ChannelProof{
+		Version:  ch.Version,
+		Ordering: ch.Ordering,
+		Proof:    chProof,
+		ProofHeight: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: height,
+		},
+	}, nil
 }
 
 func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader, trustedHeight clienttypes.Height, trustedHeader provider.IBCHeader) (ibcexported.ClientMessage, error) {
