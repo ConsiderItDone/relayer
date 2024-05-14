@@ -1850,6 +1850,52 @@
   {
     "inputs": [
       {
+        "internalType": "string",
+        "name": "portID",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelID",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "sequences",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "queryUnreceivedPackets",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "seqs",
+        "type": "uint256[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "revisionNumber",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "revisionHeight",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct Height",
+        "name": "height",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "components": [
           {
             "components": [
