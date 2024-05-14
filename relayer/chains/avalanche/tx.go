@@ -768,8 +768,28 @@ func (a AvalancheProvider) MsgSubmitMisbehaviour(clientID string, misbehaviour i
 }
 
 func (a AvalancheProvider) ValidatePacket(msgTransfer provider.PacketInfo, latestBlock provider.LatestBlock) error {
-	//TODO implement me
-	panic("implement me")
+	if msgTransfer.Sequence == 0 {
+		return errors.New("refusing to relay packet with sequence: 0")
+	}
+
+	if len(msgTransfer.Data) == 0 {
+		return errors.New("refusing to relay packet with empty data")
+	}
+
+	// This should not be possible, as it violates IBC spec
+	if msgTransfer.TimeoutHeight.IsZero() && msgTransfer.TimeoutTimestamp == 0 {
+		return errors.New("refusing to relay packet without a timeout (height or timestamp must be set)")
+	}
+
+	latestClientTypesHeight := clienttypes.NewHeight(0, latestBlock.Height)
+	if !msgTransfer.TimeoutHeight.IsZero() && latestClientTypesHeight.GTE(msgTransfer.TimeoutHeight) {
+		return provider.NewTimeoutHeightError(latestBlock.Height, msgTransfer.TimeoutHeight.RevisionHeight)
+	}
+	latestTimestamp := uint64(latestBlock.Time.UnixNano())
+	if msgTransfer.TimeoutTimestamp > 0 && latestTimestamp > msgTransfer.TimeoutTimestamp {
+		return provider.NewTimeoutTimestampError(latestTimestamp, msgTransfer.TimeoutTimestamp)
+	}
+	return nil
 }
 
 func (a AvalancheProvider) PacketCommitment(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
