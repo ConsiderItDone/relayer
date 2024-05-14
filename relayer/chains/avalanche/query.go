@@ -370,8 +370,8 @@ func (a AvalancheProvider) QueryPacketAcknowledgements(ctx context.Context, heig
 }
 
 func (a AvalancheProvider) QueryUnreceivedPackets(ctx context.Context, height uint64, channelid, portid string, seqs []uint64) ([]uint64, error) {
-	//TODO implement me
-	panic("implement me")
+	// TODO add impl via precompiles
+	return seqs, nil
 }
 
 func (a AvalancheProvider) QueryUnreceivedAcknowledgements(ctx context.Context, height uint64, channelid, portid string, seqs []uint64) ([]uint64, error) {
