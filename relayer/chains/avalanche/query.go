@@ -301,8 +301,26 @@ func (a AvalancheProvider) GenerateConnHandshakeProof(ctx context.Context, heigh
 }
 
 func (a AvalancheProvider) QueryChannel(ctx context.Context, height int64, channelid, portid string) (chanRes *chantypes.QueryChannelResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	rawdata, err := a.ibcContract.QueryChannel(&bind.CallOpts{BlockNumber: big.NewInt(height)}, portid, channelid)
+	if err != nil {
+		return nil, err
+	}
+
+	var ch chantypes.Channel
+	if err := ch.Unmarshal(rawdata); err != nil {
+		return nil, err
+	}
+
+	proof, err := a.ChannelProof(ctx, provider.ChannelInfo{PortID: portid, ChannelID: channelid}, uint64(height))
+	if err != nil {
+		return nil, err
+	}
+
+	return &chantypes.QueryChannelResponse{
+		Channel:     &ch,
+		Proof:       proof.Proof,
+		ProofHeight: proof.ProofHeight,
+	}, nil
 }
 
 func (a AvalancheProvider) QueryChannelClient(ctx context.Context, height int64, channelid, portid string) (*clienttypes.IdentifiedClientState, error) {
