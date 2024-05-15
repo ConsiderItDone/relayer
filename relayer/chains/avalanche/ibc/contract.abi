@@ -1829,6 +1829,30 @@
         "internalType": "string",
         "name": "channelID",
         "type": "string"
+      }
+    ],
+    "name": "queryPacketAcknowledgements",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "packetAcknowledgements",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portID",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelID",
+        "type": "string"
       },
       {
         "internalType": "uint256",
@@ -1841,6 +1865,30 @@
       {
         "internalType": "bytes",
         "name": "packetCommitment",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portID",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "channelID",
+        "type": "string"
+      }
+    ],
+    "name": "queryPacketCommitments",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "packetCommitments",
         "type": "bytes"
       }
     ],

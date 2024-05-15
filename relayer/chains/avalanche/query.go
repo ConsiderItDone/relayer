@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"math/big"
 	"time"
 
@@ -356,7 +358,10 @@ func (a AvalancheProvider) QueryConnectionChannels(ctx context.Context, height i
 func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.IdentifiedChannel, error) {
 	rawdata, err := a.ibcContract.QueryChannelAll(nil)
 	if err != nil {
-		return nil, err
+		if err.Error() == "empty precompile state" {
+			return []*chantypes.IdentifiedChannel{}, nil
+		}
+		return nil, fmt.Errorf("here: %w", err)
 	}
 
 	var rawlist [][]byte
@@ -385,18 +390,83 @@ func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.Iden
 }
 
 func (a AvalancheProvider) QueryPacketCommitments(ctx context.Context, height uint64, channelid, portid string) (commitments *chantypes.QueryPacketCommitmentsResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	rawdata, err := a.ibcContract.QueryPacketCommitments(&bind.CallOpts{BlockNumber: big.NewInt(int64(height))}, portid, channelid)
+	if err != nil {
+		return nil, err
+	}
+
+	var data []struct {
+		Commitment []byte
+		Sequence   uint64
+	}
+	if err := json.Unmarshal(rawdata, &data); err != nil {
+		return nil, err
+	}
+
+	res := chantypes.QueryPacketCommitmentsResponse{
+		Pagination: &query.PageResponse{
+			Total: uint64(len(data)),
+		},
+		Height: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: height,
+		},
+		Commitments: make([]*chantypes.PacketState, len(data)),
+	}
+
+	for i := range data {
+		res.Commitments[i] = &chantypes.PacketState{
+			PortId:    portid,
+			ChannelId: channelid,
+			Sequence:  data[i].Sequence,
+			Data:      data[i].Commitment,
+		}
+	}
+
+	return &res, nil
 }
 
 func (a AvalancheProvider) QueryPacketAcknowledgements(ctx context.Context, height uint64, channelid, portid string) (acknowledgements []*chantypes.PacketState, err error) {
-	//TODO implement me
-	panic("implement me")
+	rawdata, err := a.ibcContract.QueryPacketAcknowledgements(&bind.CallOpts{BlockNumber: big.NewInt(int64(height))}, portid, channelid)
+	if err != nil {
+		return nil, err
+	}
+
+	var data []struct {
+		Acknowledgement []byte
+		Sequence        uint64
+	}
+	if err := json.Unmarshal(rawdata, &data); err != nil {
+		return nil, err
+	}
+
+	acks := make([]*chantypes.PacketState, len(data))
+	for i := range data {
+		acks[i] = &chantypes.PacketState{
+			PortId:    portid,
+			ChannelId: channelid,
+			Sequence:  data[i].Sequence,
+			Data:      data[i].Acknowledgement,
+		}
+	}
+
+	return acks, nil
 }
 
 func (a AvalancheProvider) QueryUnreceivedPackets(ctx context.Context, height uint64, channelid, portid string, seqs []uint64) ([]uint64, error) {
-	// TODO add impl via precompiles
-	return seqs, nil
+	seqsdata := make([]*big.Int, len(seqs))
+	for i := range seqs {
+		seqsdata[i] = new(big.Int).SetUint64(seqs[i])
+	}
+	rawdata, err := a.ibcContract.QueryUnreceivedPackets(&bind.CallOpts{BlockNumber: big.NewInt(int64(height))}, portid, channelid, seqsdata)
+	if err != nil {
+		return nil, err
+	}
+	resp := make([]uint64, len(rawdata.Seqs))
+	for i := range rawdata.Seqs {
+		resp[i] = rawdata.Seqs[i].Uint64()
+	}
+	return resp, nil
 }
 
 func (a AvalancheProvider) QueryUnreceivedAcknowledgements(ctx context.Context, height uint64, channelid, portid string, seqs []uint64) ([]uint64, error) {
