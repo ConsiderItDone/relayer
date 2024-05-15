@@ -354,7 +354,32 @@ func (a AvalancheProvider) QueryConnectionChannels(ctx context.Context, height i
 }
 
 func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.IdentifiedChannel, error) {
-	chans := []*chantypes.IdentifiedChannel{}
+	rawdata, err := a.ibcContract.QueryChannelAll(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var rawlist [][]byte
+	if err := json.Unmarshal(rawdata, &rawlist); err != nil {
+		return nil, err
+	}
+
+	chans := make([]*chantypes.IdentifiedChannel, len(rawlist))
+	for i := range rawlist {
+		var ch chantypes.Channel
+		if err := ch.Unmarshal(rawlist[i]); err != nil {
+			return nil, err
+		}
+		chans[i] = &chantypes.IdentifiedChannel{
+			State:          ch.State,
+			Ordering:       ch.Ordering,
+			Counterparty:   ch.Counterparty,
+			ConnectionHops: ch.ConnectionHops,
+			Version:        ch.Version,
+			PortId:         ch.Counterparty.PortId,
+			ChannelId:      ch.Counterparty.ChannelId,
+		}
+	}
 
 	return chans, nil
 }
