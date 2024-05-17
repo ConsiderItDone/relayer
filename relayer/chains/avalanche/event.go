@@ -3,12 +3,13 @@ package avalanche
 import (
 	"errors"
 	"fmt"
+
 	"strconv"
 	"strings"
 	"time"
 
 	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
@@ -256,7 +257,7 @@ func (res *packetInfo) parseChannelAttribute(log *zap.Logger, name, value string
 	var err error
 	switch name {
 	case "data":
-		res.Data = []byte(value)
+		res.Data = common.Hex2Bytes(value)
 	case "timeoutHeight":
 		timeoutSplit := strings.Split(value, "-")
 		if len(timeoutSplit) != 2 {
@@ -301,7 +302,17 @@ func (res *packetInfo) parseChannelAttribute(log *zap.Logger, name, value string
 	case "destChannel":
 		res.DestChannel = value
 	case "ack":
-		res.Ack = []byte(value)
+		res.Ack = common.Hex2Bytes(value)
+	case "channelOrdering":
+		switch value {
+		case "0":
+			res.ChannelOrder = "ORDER_NONE_UNSPECIFIED"
+		case "1":
+			res.ChannelOrder = "ORDER_UNORDERED"
+		case "2":
+			res.ChannelOrder = "ORDER_ORDERED"
+		}
+	case "connection", "connectionID":
 	default:
 		err = errors.New("unknown event property")
 	}
@@ -599,7 +610,12 @@ func parseEventsFromTxReceipt(contractABI abi.ABI, receipt *evmtypes.Receipt) ([
 			// convert from map into Relayer event structure
 			attributes := make(map[string]string)
 			for key, value := range eventMap {
-				attributes[key] = fmt.Sprintf("%v", value)
+				switch v := value.(type) {
+				case []byte:
+					attributes[key] = fmt.Sprintf("%#x", v)
+				default:
+					attributes[key] = fmt.Sprintf("%v", v)
+				}
 			}
 
 			events = append(events, provider.RelayerEvent{

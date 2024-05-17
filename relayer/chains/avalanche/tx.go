@@ -798,8 +798,14 @@ func (a AvalancheProvider) PacketCommitment(ctx context.Context, msgTransfer pro
 }
 
 func (a AvalancheProvider) PacketAcknowledgement(ctx context.Context, msgRecvPacket provider.PacketInfo, height uint64) (provider.PacketProof, error) {
-	//TODO implement me
-	panic("implement me")
+	ack, err := a.ibcContract.QueryPacketCommitment(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(height)}, msgRecvPacket.DestPort, msgRecvPacket.DestChannel, new(big.Int).SetUint64(msgRecvPacket.Sequence))
+	return provider.PacketProof{
+		Proof: ack,
+		ProofHeight: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: height,
+		},
+	}, err
 }
 
 func (a AvalancheProvider) PacketReceipt(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
@@ -818,8 +824,31 @@ func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info pro
 }
 
 func (a AvalancheProvider) MsgRecvPacket(msgTransfer provider.PacketInfo, proof provider.PacketProof) (provider.RelayerMessage, error) {
-	//TODO implement me
-	panic("implement me")
+	msg, err := ibc.PackRecvPacket(ibc.IIBCMsgRecvPacket{
+		Packet: ibc.Packet{
+			Sequence:           new(big.Int).SetUint64(msgTransfer.Sequence),
+			SourcePort:         msgTransfer.SourcePort,
+			SourceChannel:      msgTransfer.SourceChannel,
+			DestinationPort:    msgTransfer.DestPort,
+			DestinationChannel: msgTransfer.DestChannel,
+			Data:               msgTransfer.Data,
+			TimeoutHeight: ibc.Height{
+				RevisionNumber: new(big.Int).SetUint64(msgTransfer.TimeoutHeight.RevisionNumber),
+				RevisionHeight: new(big.Int).SetUint64(msgTransfer.TimeoutHeight.RevisionHeight),
+			},
+			TimeoutTimestamp: new(big.Int).SetUint64(msgTransfer.TimeoutTimestamp),
+		},
+		ProofCommitment: proof.Proof,
+		ProofHeight: ibc.Height{
+			RevisionNumber: new(big.Int).SetUint64(proof.ProofHeight.RevisionNumber),
+			RevisionHeight: new(big.Int).SetUint64(proof.ProofHeight.RevisionHeight),
+		},
+		Signer: a.txAuth.From.Hex(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return NewEVMMessage(msg), nil
 }
 
 func (a AvalancheProvider) MsgAcknowledgement(msgRecvPacket provider.PacketInfo, proofAcked provider.PacketProof) (provider.RelayerMessage, error) {

@@ -331,9 +331,12 @@ func (a AvalancheProvider) QueryChannelClient(ctx context.Context, height int64,
 }
 
 func (a AvalancheProvider) QueryConnectionChannels(ctx context.Context, height int64, connectionid string) ([]*chantypes.IdentifiedChannel, error) {
-	// TODO add method QueryConnectionChannels to subnet
-	rawChannel, err := a.ibcContract.QueryChannel(&bind.CallOpts{BlockNumber: big.NewInt(height)}, "port-id", connectionid)
+	//TODO need to add QueryConnectionChannels into precompiles
+	rawChannel, err := a.ibcContract.QueryChannel(&bind.CallOpts{BlockNumber: big.NewInt(height)}, "transfer", connectionid)
 	if err != nil {
+		if err.Error() == "empty precompile state" {
+			return []*chantypes.IdentifiedChannel{}, nil
+		}
 		return nil, err
 	}
 
@@ -392,6 +395,18 @@ func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.Iden
 func (a AvalancheProvider) QueryPacketCommitments(ctx context.Context, height uint64, channelid, portid string) (commitments *chantypes.QueryPacketCommitmentsResponse, err error) {
 	rawdata, err := a.ibcContract.QueryPacketCommitments(&bind.CallOpts{BlockNumber: big.NewInt(int64(height))}, portid, channelid)
 	if err != nil {
+		if err.Error() == "empty precompile state" {
+			return &chantypes.QueryPacketCommitmentsResponse{
+				Pagination: &query.PageResponse{
+					Total: 0,
+				},
+				Height: clienttypes.Height{
+					RevisionNumber: 0,
+					RevisionHeight: height,
+				},
+				Commitments: make([]*chantypes.PacketState, 0),
+			}, nil
+		}
 		return nil, err
 	}
 
