@@ -473,9 +473,10 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 			attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
 			attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
 			attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
-			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionID"]
+			attributes[channeltypes.AttributeKeyAck] = event.Attributes["ack"]
 			events = append(events, provider.RelayerEvent{
-				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				EventType:  channeltypes.EventTypeSendPacket,
 				Attributes: attributes,
 			})
 		case eventPacketRecvPacket:
@@ -490,9 +491,10 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 			attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
 			attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
 			attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
-			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionID"]
+			attributes[channeltypes.AttributeKeyAck] = event.Attributes["ack"]
 			events = append(events, provider.RelayerEvent{
-				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				EventType:  channeltypes.EventTypeRecvPacket,
 				Attributes: attributes,
 			})
 		case eventPacketWriteAck:
@@ -507,10 +509,10 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 			attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
 			attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
 			attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
-			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionID"]
 			attributes[channeltypes.AttributeKeyAck] = event.Attributes["ack"]
 			events = append(events, provider.RelayerEvent{
-				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				EventType:  channeltypes.EventTypeWriteAck,
 				Attributes: attributes,
 			})
 		case eventPacketAcknowledgePacket:
@@ -525,9 +527,10 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 			attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
 			attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
 			attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
-			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionID"]
+			attributes[channeltypes.AttributeKeyAck] = event.Attributes["ack"]
 			events = append(events, provider.RelayerEvent{
-				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				EventType:  channeltypes.EventTypeAcknowledgePacket,
 				Attributes: attributes,
 			})
 		case eventPacketTimeoutPacket:
@@ -542,9 +545,10 @@ func transformEvents(origEvents []provider.RelayerEvent) []provider.RelayerEvent
 			attributes[channeltypes.AttributeKeyDstChannel] = event.Attributes["destChannel"]
 			attributes[channeltypes.AttributeKeyChannelOrdering] = event.Attributes["channelOrdering"]
 			attributes[channeltypes.AttributeKeyConnection] = event.Attributes["connection"]
-			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connection"]
+			attributes[channeltypes.AttributeKeyConnectionID] = event.Attributes["connectionID"]
+			attributes[channeltypes.AttributeKeyAck] = event.Attributes["ack"]
 			events = append(events, provider.RelayerEvent{
-				EventType:  channeltypes.EventTypeChannelCloseConfirm,
+				EventType:  channeltypes.EventTypeTimeoutPacket,
 				Attributes: attributes,
 			})
 			//case eventPacketTimeoutPacketOnClose:
