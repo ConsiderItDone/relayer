@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"strconv"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"math/big"
 	"time"
@@ -24,7 +26,7 @@ import (
 	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
 	"golang.org/x/exp/maps"
-
+	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
@@ -168,8 +170,73 @@ func (a AvalancheProvider) QuerySendPacket(ctx context.Context, srcChanID, srcPo
 }
 
 func (a AvalancheProvider) QueryRecvPacket(ctx context.Context, dstChanID, dstPortID string, sequence uint64) (provider.PacketInfo, error) {
-	//TODO implement me
-	panic("implement me")
+	num, err := a.ethClient.BlockNumber(ctx)
+	if err != nil {
+		return provider.PacketInfo{}, err
+	}
+
+	abi, err := ibccontract.IBCMetaData.GetAbi()
+	if err != nil {
+		return provider.PacketInfo{}, err
+	}
+	_ = abi
+
+	start := uint64(0)
+	if num > 1000 {
+		start = num - 1000
+	}
+	iter, err := a.ibcContract.FilterPacketRecv(&bind.FilterOpts{Start: start})
+	if err != nil {
+		return provider.PacketInfo{}, err
+	}
+
+	var event *ibccontract.IBCPacketRecv = nil
+	for iter.Next() {
+
+		if iter.Event.Sequence.Uint64() == sequence {
+			event = iter.Event
+		}
+	}
+	if event == nil {
+		return provider.PacketInfo{}, fmt.Errorf("event not found")
+	}
+
+	ordering := ""
+	switch event.ChannelOrdering {
+	default:
+		ordering = "ORDER_NONE_UNSPECIFIED"
+	case 1:
+		ordering = "ORDER_UNORDERED"
+	case 2:
+		ordering = "ORDER_ORDERED"
+	}
+
+	timeoutSplit := strings.Split(event.TimeoutHeight, "-")
+	if len(timeoutSplit) != 2 {
+		return provider.PacketInfo{}, fmt.Errorf("bad TimeoutHeight value: '%s'", event.TimeoutHeight)
+	}
+	revisionNumber, err := strconv.ParseUint(timeoutSplit[0], 10, 64)
+	if err != nil {
+		return provider.PacketInfo{}, fmt.Errorf("bad TimeoutHeight value: '%s'", event.TimeoutHeight)
+	}
+	revisionHeight, err := strconv.ParseUint(timeoutSplit[1], 10, 64)
+	if err != nil {
+		return provider.PacketInfo{}, fmt.Errorf("bad TimeoutHeight value: '%s'", event.TimeoutHeight)
+	}
+	return provider.PacketInfo{
+		Sequence:      sequence,
+		SourcePort:    event.SourcePort,
+		SourceChannel: event.SourceChannel,
+		DestPort:      event.DestPort,
+		DestChannel:   event.DestChannel,
+		ChannelOrder:  ordering,
+		Data:          event.Data,
+		TimeoutHeight: clienttypes.Height{
+			RevisionHeight: revisionHeight,
+			RevisionNumber: revisionNumber,
+		},
+		TimeoutTimestamp: event.TimeoutTimestamp.Uint64(),
+	}, nil
 }
 
 func (a AvalancheProvider) QueryBalance(ctx context.Context, keyName string) (sdk.Coins, error) {
