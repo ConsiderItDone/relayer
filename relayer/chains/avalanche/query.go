@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ava-labs/subnet-evm/interfaces"
+	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
+	"github.com/ethereum/go-ethereum/common"
 	"strings"
 	"strconv"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -170,35 +173,37 @@ func (a AvalancheProvider) QuerySendPacket(ctx context.Context, srcChanID, srcPo
 }
 
 func (a AvalancheProvider) QueryRecvPacket(ctx context.Context, dstChanID, dstPortID string, sequence uint64) (provider.PacketInfo, error) {
-	num, err := a.ethClient.BlockNumber(ctx)
-	if err != nil {
-		return provider.PacketInfo{}, err
-	}
-
 	abi, err := ibccontract.IBCMetaData.GetAbi()
 	if err != nil {
 		return provider.PacketInfo{}, err
 	}
-	_ = abi
 
-	start := uint64(0)
-	if num > 1000 {
-		start = num - 1000
+	EventPacketRecv, exist := abi.Events["PacketRecv"]
+	if !exist {
+		return provider.PacketInfo{}, fmt.Errorf("event PacketRecv not found in abi")
 	}
-	iter, err := a.ibcContract.FilterPacketRecv(&bind.FilterOpts{Start: start})
-	if err != nil {
-		return provider.PacketInfo{}, err
-	}
+
+	logs, err := a.ethClient.FilterLogs(ctx, interfaces.FilterQuery{
+		Addresses: []common.Address{
+			ibc.ContractAddress,
+		},
+		FromBlock: nil,
+		ToBlock:   nil,
+		Topics: [][]common.Hash{
+			{EventPacketRecv.ID},
+		},
+	})
 
 	var event *ibccontract.IBCPacketRecv = nil
-	for iter.Next() {
-
-		if iter.Event.Sequence.Uint64() == sequence {
-			event = iter.Event
+	for i := range logs {
+		e, err := a.ibcContract.ParsePacketRecv(logs[i])
+		if err == nil && e.Sequence.Uint64() == sequence {
+			event = e
 		}
 	}
+
 	if event == nil {
-		return provider.PacketInfo{}, fmt.Errorf("event not found")
+		return provider.PacketInfo{}, fmt.Errorf("event PacketRecv[seq=%d] not found", sequence)
 	}
 
 	ordering := ""
