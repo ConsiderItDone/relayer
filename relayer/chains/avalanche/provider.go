@@ -28,8 +28,8 @@ import (
 	"github.com/ava-labs/subnet-evm/ethclient"
 	"github.com/ava-labs/subnet-evm/ethclient/subnetevmclient"
 
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 var (
@@ -118,7 +118,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	}
 
 	a.txAuth, err = bind.NewKeyedTransactorWithChainID(tempKey, chainId)
-	a.txAuth.GasLimit = 600000
+	a.txAuth.GasLimit = 1000000
 	if err != nil {
 		return err
 	}
