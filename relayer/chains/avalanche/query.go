@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/ava-labs/subnet-evm/interfaces"
 	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
-	"github.com/ethereum/go-ethereum/common"
-	"strings"
-	"strconv"
 	"github.com/cosmos/cosmos-sdk/types/query"
-	"math/big"
-	"time"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ava-labs/avalanchego/utils"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
@@ -28,9 +29,9 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
-	"golang.org/x/exp/maps"
 	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+	"golang.org/x/exp/maps"
 )
 
 func (a AvalancheProvider) QueryTx(ctx context.Context, hashHex string) (*provider.RelayerTxResponse, error) {
@@ -168,8 +169,75 @@ func (a AvalancheProvider) avalancheBlsSignature(ctx context.Context, payloadDat
 }
 
 func (a AvalancheProvider) QuerySendPacket(ctx context.Context, srcChanID, srcPortID string, sequence uint64) (provider.PacketInfo, error) {
-	//TODO implement me
-	panic("implement me")
+	abi, err := ibccontract.IBCMetaData.GetAbi()
+	if err != nil {
+		return provider.PacketInfo{}, err
+	}
+
+	EventPacketSent, exist := abi.Events["PacketSent"]
+	if !exist {
+		return provider.PacketInfo{}, fmt.Errorf("event PacketRecv not found in abi")
+	}
+
+	logs, err := a.ethClient.FilterLogs(ctx, interfaces.FilterQuery{
+		Addresses: []common.Address{
+			ibc.ContractAddress,
+		},
+		FromBlock: nil,
+		ToBlock:   nil,
+		Topics: [][]common.Hash{
+			{EventPacketSent.ID},
+		},
+	})
+
+	var event *ibccontract.IBCPacketSent = nil
+	for i := range logs {
+		e, err := a.ibcContract.ParsePacketSent(logs[i])
+		if err == nil && e.Sequence.Uint64() == sequence {
+			event = e
+		}
+	}
+
+	if event == nil {
+		return provider.PacketInfo{}, fmt.Errorf("event PacketRecv[seq=%d] not found", sequence)
+	}
+
+	ordering := ""
+	switch event.ChannelOrdering {
+	default:
+		ordering = "ORDER_NONE_UNSPECIFIED"
+	case 1:
+		ordering = "ORDER_UNORDERED"
+	case 2:
+		ordering = "ORDER_ORDERED"
+	}
+
+	timeoutSplit := strings.Split(event.TimeoutHeight, "-")
+	if len(timeoutSplit) != 2 {
+		return provider.PacketInfo{}, fmt.Errorf("bad TimeoutHeight value: '%s'", event.TimeoutHeight)
+	}
+	revisionNumber, err := strconv.ParseUint(timeoutSplit[0], 10, 64)
+	if err != nil {
+		return provider.PacketInfo{}, fmt.Errorf("bad TimeoutHeight value: '%s'", event.TimeoutHeight)
+	}
+	revisionHeight, err := strconv.ParseUint(timeoutSplit[1], 10, 64)
+	if err != nil {
+		return provider.PacketInfo{}, fmt.Errorf("bad TimeoutHeight value: '%s'", event.TimeoutHeight)
+	}
+	return provider.PacketInfo{
+		Sequence:      sequence,
+		SourcePort:    event.SourcePort,
+		SourceChannel: event.SourceChannel,
+		DestPort:      event.DestPort,
+		DestChannel:   event.DestChannel,
+		ChannelOrder:  ordering,
+		Data:          event.Data,
+		TimeoutHeight: clienttypes.Height{
+			RevisionHeight: revisionHeight,
+			RevisionNumber: revisionNumber,
+		},
+		TimeoutTimestamp: event.TimeoutTimestamp.Uint64(),
+	}, nil
 }
 
 func (a AvalancheProvider) QueryRecvPacket(ctx context.Context, dstChanID, dstPortID string, sequence uint64) (provider.PacketInfo, error) {
@@ -403,31 +471,39 @@ func (a AvalancheProvider) QueryChannelClient(ctx context.Context, height int64,
 }
 
 func (a AvalancheProvider) QueryConnectionChannels(ctx context.Context, height int64, connectionid string) ([]*chantypes.IdentifiedChannel, error) {
-	//TODO need to add QueryConnectionChannels into precompiles
-	rawChannel, err := a.ibcContract.QueryChannel(&bind.CallOpts{BlockNumber: big.NewInt(height)}, "transfer", connectionid)
+	rawdata, err := a.ibcContract.QueryChannelAll(nil)
 	if err != nil {
 		if err.Error() == "empty precompile state" {
 			return []*chantypes.IdentifiedChannel{}, nil
 		}
+		return nil, fmt.Errorf("here: %w", err)
+	}
+
+	var rawlist [][]byte
+	if err := json.Unmarshal(rawdata, &rawlist); err != nil {
 		return nil, err
 	}
 
-	var channel chantypes.Channel
-	if err := channel.Unmarshal(rawChannel); err != nil {
-		return nil, err
+	chans := make([]*chantypes.IdentifiedChannel, 0)
+	for i := range rawlist {
+		var ch chantypes.Channel
+		if err := ch.Unmarshal(rawlist[i]); err != nil {
+			return nil, err
+		}
+		if ch.ConnectionHops[0] == connectionid {
+			chans = append(chans, &chantypes.IdentifiedChannel{
+				State:          ch.State,
+				Ordering:       ch.Ordering,
+				Counterparty:   ch.Counterparty,
+				ConnectionHops: ch.ConnectionHops,
+				Version:        ch.Version,
+				PortId:         ch.Counterparty.PortId,
+				ChannelId:      ch.Counterparty.ChannelId,
+			})
+		}
 	}
 
-	return []*chantypes.IdentifiedChannel{
-		{
-			State:          channel.State,
-			Ordering:       channel.Ordering,
-			Counterparty:   channel.Counterparty,
-			ConnectionHops: channel.ConnectionHops,
-			Version:        channel.Version,
-			PortId:         channel.Counterparty.PortId,
-			ChannelId:      channel.Counterparty.ChannelId,
-		},
-	}, nil
+	return chans, nil
 }
 
 func (a AvalancheProvider) QueryChannels(ctx context.Context) ([]*chantypes.IdentifiedChannel, error) {
@@ -593,5 +669,10 @@ func (a AvalancheProvider) QueryDenomTrace(ctx context.Context, denom string) (*
 
 func (a AvalancheProvider) QueryDenomTraces(ctx context.Context, offset, limit uint64, height int64) ([]transfertypes.DenomTrace, error) {
 	//TODO implement me
-	panic("implement me")
+	return []transfertypes.DenomTrace{
+		transfertypes.DenomTrace{
+			"demo2",
+			"ETH",
+		},
+	}, nil
 }
