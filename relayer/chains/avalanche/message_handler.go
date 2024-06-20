@@ -2,10 +2,11 @@ package avalanche
 
 import (
 	"context"
-	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+
+	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"go.uber.org/zap/zapcore"
 
-	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/relayer/v2/relayer/processor"

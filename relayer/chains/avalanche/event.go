@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
-	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	connectointypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	connectointypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 

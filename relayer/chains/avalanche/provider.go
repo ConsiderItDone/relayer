@@ -19,8 +19,8 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/gogoproto/proto"
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
-	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 

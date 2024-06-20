@@ -9,9 +9,9 @@ import (
 
 	"github.com/ava-labs/subnet-evm/core/types"
 	"github.com/avast/retry-go/v4"
-	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
