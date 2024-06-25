@@ -14,9 +14,9 @@ import (
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	"github.com/cosmos/relayer/v2/relayer/chains"
 	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
+	"github.com/cosmos/relayer/v2/relayer/chains"
 	"github.com/cosmos/relayer/v2/relayer/processor"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
@@ -102,7 +102,7 @@ func (l latestClientState) update(ctx context.Context, clientInfo chains.ClientI
 		trustingPeriod = existingClientInfo.TrustingPeriod
 	}
 	if trustingPeriod == 0 {
-		cs, err := ccp.chainProvider.QueryClientState(ctx, 0, clientInfo.clientID)
+		cs, err := ccp.chainProvider.QueryClientState(ctx, 0, clientInfo.ClientID)
 		if err != nil {
 			ccp.log.Error(
 				"Failed to query client state to get trusting period",
@@ -120,7 +120,7 @@ func (l latestClientState) update(ctx context.Context, clientInfo chains.ClientI
 		default:
 			ccp.log.Error(
 				fmt.Sprintf("unknown client state type, got(%T)", cs),
-				zap.String("client_id", clientInfo.clientID),
+				zap.String("client_id", clientInfo.ClientID),
 				zap.Error(err),
 			)
 			return

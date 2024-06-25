@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/ava-labs/subnet-evm/interfaces"
 	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -21,7 +22,6 @@ import (
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp/payload"
 	"github.com/ava-labs/subnet-evm/accounts/abi/bind"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
@@ -313,7 +313,7 @@ func (a AvalancheProvider) QueryRecvPacket(ctx context.Context, dstChanID, dstPo
 }
 
 func (a AvalancheProvider) QueryBalance(ctx context.Context, keyName string) (sdk.Coins, error) {
-	return sdk.Coins{sdk.NewCoin("avax", sdk.NewInt(4))}, nil
+	return sdk.Coins{sdk.NewCoin("avax", math.NewInt(4))}, nil
 }
 
 func (a AvalancheProvider) QueryBalanceWithAddress(ctx context.Context, addr string) (sdk.Coins, error) {
@@ -333,7 +333,7 @@ func (a AvalancheProvider) QueryClientState(ctx context.Context, height int64, c
 
 	// check if client exists
 	if len(clientStateBz) == 0 {
-		return nil, sdkerrors.Wrap(clienttypes.ErrClientNotFound, clientid)
+		return nil, clienttypes.ErrClientNotFound
 	}
 
 	tmClientState := tendermint.ClientState{}
@@ -353,7 +353,7 @@ func (a AvalancheProvider) QueryClientStateResponse(ctx context.Context, height 
 
 	// check if client exists
 	if len(clientStateBz) == 0 {
-		return nil, sdkerrors.Wrap(clienttypes.ErrClientNotFound, srcClientId)
+		return nil, clienttypes.ErrClientNotFound
 	}
 
 	tmClientState := tendermint.ClientState{}
@@ -658,6 +658,11 @@ func (a AvalancheProvider) QueryPacketAcknowledgement(ctx context.Context, heigh
 }
 
 func (a AvalancheProvider) QueryPacketReceipt(ctx context.Context, height int64, channelid, portid string, seq uint64) (recRes *chantypes.QueryPacketReceiptResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) QueryDenomHash(ctx context.Context, trace string) (string, error) {
 	//TODO implement me
 	panic("implement me")
 }

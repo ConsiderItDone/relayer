@@ -66,10 +66,10 @@ func (h AvalancheIBCHeader) Height() uint64 {
 
 func (h AvalancheIBCHeader) ConsensusState() ibcexported.ConsensusState {
 	return &avalanche.ConsensusState{
-		Timestamp:          time.Unix(int64(h.EthHeader.Time), 0),
-		StorageRoot:        h.EthHeader.Root.Bytes(),
-		SignedStorageRoot:  h.SignedStorageRoot[:],
-		ValidatorSet:       h.ValidatorSet,
+		Timestamp:         time.Unix(int64(h.EthHeader.Time), 0),
+		StorageRoot:       h.EthHeader.Root.Bytes(),
+		SignedStorageRoot: h.SignedStorageRoot[:],
+		//ValidatorSet:       h.ValidatorSet,
 		SignedValidatorSet: h.SignedValidatorSet[:],
 		Vdrs:               h.Vdrs,
 		SignersInput:       h.SignersInput,
@@ -157,6 +157,16 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	return nil
 }
 
+func (a AvalancheProvider) SetRpcAddr(rpcAddr string) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a AvalancheProvider) UseKey(key string) error {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (a AvalancheProvider) ChainName() string {
 	return a.PCfg.ChainName
 }
@@ -196,7 +206,7 @@ func (a AvalancheProvider) Timeout() string {
 	return a.PCfg.Timeout
 }
 
-func (a AvalancheProvider) TrustingPeriod(ctx context.Context) (time.Duration, error) {
+func (a AvalancheProvider) TrustingPeriod(ctx context.Context, overrideUnbondingPeriod time.Duration, percentage int64) (time.Duration, error) {
 	// TODO
 	return time.Hour * 2, nil
 }

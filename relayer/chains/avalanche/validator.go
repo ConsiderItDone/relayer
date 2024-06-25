@@ -22,3 +22,7 @@ type Validator struct {
 func (v *Validator) Less(o *Validator) bool {
 	return bytes.Compare(v.PublicKeyBytes, o.PublicKeyBytes) < 0
 }
+
+func (v *Validator) Compare(o *Validator) int {
+	return bytes.Compare(v.PublicKeyBytes, o.PublicKeyBytes)
+}

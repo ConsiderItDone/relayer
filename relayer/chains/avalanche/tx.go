@@ -389,12 +389,22 @@ var defaultUpgradePath = "upgrade"
 
 func (a AvalancheProvider) NewClientState(
 	dstChainID string,
-	dstUpdateHeader provider.IBCHeader,
+	dstIBCHeader provider.IBCHeader,
 	dstTrustingPeriod,
-	dstUbdPeriod time.Duration,
+	dstUbdPeriod,
+	maxClockDrift time.Duration,
 	allowUpdateAfterExpiry,
 	allowUpdateAfterMisbehaviour bool,
 ) (ibcexported.ClientState, error) {
+	// Old signature of func
+	// func (a AvalancheProvider) NewClientState(
+	// 	dstChainID string,
+	// 	dstUpdateHeader provider.IBCHeader,
+	// 	dstTrustingPeriod,
+	// 	dstUbdPeriod time.Duration,
+	// 	allowUpdateAfterExpiry,
+	// 	allowUpdateAfterMisbehaviour bool,
+	// ) (ibcexported.ClientState, error) {
 	revisionNumber := clienttypes.ParseChainID(dstChainID)
 
 	trustLevel := avaclient.Fraction{
@@ -411,7 +421,7 @@ func (a AvalancheProvider) NewClientState(
 		FrozenHeight:   clienttypes.ZeroHeight(),
 		LatestHeight: clienttypes.Height{
 			RevisionNumber: revisionNumber,
-			RevisionHeight: dstUpdateHeader.Height(),
+			RevisionHeight: dstIBCHeader.Height(),
 		},
 		UpgradePath:                  defaultUpgradePath,
 		AllowUpdateAfterExpiry:       allowUpdateAfterExpiry,

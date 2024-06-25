@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
@@ -12,8 +13,6 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
-
-	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // pathEndRuntime is used at runtime for each chain involved in the path.

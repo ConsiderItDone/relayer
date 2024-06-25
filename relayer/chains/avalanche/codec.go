@@ -1,9 +1,8 @@
 package avalanche
 
 import (
-	feegrant "cosmossdk.io/x/feegrant"
+	feegrant "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
-	upgradeclient "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -40,10 +39,9 @@ var moduleBasics = []module.AppModuleBasic{
 	gov.NewAppModuleBasic(
 		[]govclient.ProposalHandler{
 			paramsclient.ProposalHandler,
-			upgradeclient.LegacyProposalHandler,
-			upgradeclient.LegacyCancelProposalHandler,
 		},
 	),
+	upgrade.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	distribution.AppModuleBasic{},
 	feegrant.AppModuleBasic{},

@@ -11,13 +11,12 @@ import (
 	legacyerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // messageProcessor is used for concurrent IBC message assembly and sending

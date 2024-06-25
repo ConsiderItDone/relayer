@@ -13,8 +13,6 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // CreateClients creates clients for src on dst and dst on src if the client ids are unspecified.

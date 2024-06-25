@@ -43,8 +43,8 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	localhost "github.com/cosmos/ibc-go/v8/modules/light-clients/09-localhost"
-	strideicqtypes "github.com/cosmos/relayer/v2/relayer/chains/cosmos/stride"
 	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
+	strideicqtypes "github.com/cosmos/relayer/v2/relayer/chains/cosmos/stride"
 	"github.com/cosmos/relayer/v2/relayer/ethermint"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
@@ -52,9 +52,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/cosmos/relayer/v2/relayer/chains/avalanche"
-	strideicqtypes "github.com/cosmos/relayer/v2/relayer/chains/cosmos/stride"
-	"github.com/cosmos/relayer/v2/relayer/ethermint"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // Variables used for retries

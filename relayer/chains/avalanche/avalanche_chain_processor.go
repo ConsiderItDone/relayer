@@ -102,7 +102,7 @@ type queryCyclePersistence struct {
 // Run starts the query loop for the chain which will gather applicable ibc messages and push events out to the relevant PathProcessors.
 // The initialBlockHistory parameter determines how many historical blocks should be fetched and processed before continuing with current blocks.
 // ChainProcessors should obey the context and return upon context cancellation.
-func (acp *AvalancheChainProcessor) Run(ctx context.Context, initialBlockHistory uint64) error {
+func (acp *AvalancheChainProcessor) Run(ctx context.Context, initialBlockHistory uint64, stuckPacket *processor.StuckPacket) error {
 	minQueryLoopDuration := acp.chainProvider.PCfg.MinLoopDuration
 	if minQueryLoopDuration == 0 {
 		minQueryLoopDuration = defaultMinQueryLoopDuration

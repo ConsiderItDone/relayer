@@ -13,8 +13,6 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // preInitKey is used to declare intent to initialize a connection or channel handshake
