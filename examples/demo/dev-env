@@ -18,6 +18,7 @@ pwd
 # spin up two ibc enabled chains and add relevant config info for relaying
 bash scripts/two-chainz "skip"
 
+exit
 echo "waiting for blocks..."
 sleep 3
 
