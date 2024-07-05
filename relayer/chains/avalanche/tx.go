@@ -423,9 +423,9 @@ func (a AvalancheProvider) NewClientState(
 			RevisionNumber: revisionNumber,
 			RevisionHeight: dstIBCHeader.Height(),
 		},
-		UpgradePath:                  defaultUpgradePath,
-		AllowUpdateAfterExpiry:       allowUpdateAfterExpiry,
-		AllowUpdateAfterMisbehaviour: allowUpdateAfterMisbehaviour,
+		UpgradePath: defaultUpgradePath,
+		//AllowUpdateAfterExpiry:       allowUpdateAfterExpiry,
+		//AllowUpdateAfterMisbehaviour: allowUpdateAfterMisbehaviour,
 	}, nil
 }
 
@@ -1149,9 +1149,9 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 				RevisionHeight: latestAvalancheHeader.PChainHeight,
 			},
 		},
-		StorageRoot:        latestAvalancheHeader.EthHeader.Root.Bytes(),
-		SignedStorageRoot:  latestAvalancheHeader.SignedStorageRoot[:],
-		ValidatorSet:       latestAvalancheHeader.ValidatorSet,
+		StorageRoot:       latestAvalancheHeader.EthHeader.Root.Bytes(),
+		SignedStorageRoot: latestAvalancheHeader.SignedStorageRoot[:],
+		//ValidatorSet:       latestAvalancheHeader.ValidatorSet,
 		SignedValidatorSet: latestAvalancheHeader.SignedValidatorSet[:],
 		Vdrs:               latestAvalancheHeader.Vdrs,
 		SignersInput:       latestAvalancheHeader.SignersInput,

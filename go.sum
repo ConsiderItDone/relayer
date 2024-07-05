@@ -1167,10 +1167,10 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.0 h1:eMn9+ho65ar830L3tk/UwW7Ojc2+/LJvX2xpqsG2gxg=
-github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.0/go.mod h1:hmWFcHSlLqln+CKY1cAFa6ms7f+ApxL1iGQP81DMUYc=
-github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240625135826-5fe0326e8ce8 h1:zBJGBZT2rql8C7+mebPLiMKK1yWqHD+LQ9OVflllxQI=
-github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240625135826-5fe0326e8ce8/go.mod h1:CIbWynQwu6KGxMT61RlGgxN/t83mqIFmSGWZajlPTew=
+github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20240705131023-9fe1c67b68bc h1:Yq0P6wU1qrs6w7d8mrpbbpQUwS5RbFeeccvIbWnKbDM=
+github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20240705131023-9fe1c67b68bc/go.mod h1:Z4BmDREfLqv6nFWjT4Hj1IG0jtBpYDRIem9tNXig4YE=
+github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240705131122-508448301543 h1:mmxJjAq+JGw7J1yd4PpNrYsB493+FqDlKgIJDJhqn4I=
+github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240705131122-508448301543/go.mod h1:CIbWynQwu6KGxMT61RlGgxN/t83mqIFmSGWZajlPTew=
 github.com/DataDog/datadog-go v3.2.0+incompatible h1:qSG2N4FghB1He/r2mFrWKCaL7dXCilEuNEeAn20fdD4=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/DataDog/zstd v1.5.5 h1:oWf5W7GtOLgp6bciQYDmhHHjdhYkALu6S/5Ni9ZgSvQ=
@@ -1221,6 +1221,8 @@ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj
 github.com/aryann/difflib v0.0.0-20170710044230-e206f873d14a/go.mod h1:DAHtR1m6lCRdSC2Tm3DSWRPvIPr6xNKyeHdqDQSQT+A=
 github.com/ava-labs/avalanchego v1.10.18 h1:ErJ+SJBtN9tVqk3OPRXffpf+MWeQnNZJlBNWQIgAg8A=
 github.com/ava-labs/avalanchego v1.10.18/go.mod h1:wqmokVcLXE+9Nfa8wHdGJtjEW35acVf8rkraSZPVBA4=
+github.com/ava-labs/coreth v0.12.10-rc.5 h1:FMVvXHssvMQ3Eade7i85Wsx9tuD3kUOFMG8ktHeDTp8=
+github.com/ava-labs/coreth v0.12.10-rc.5/go.mod h1:a58HbIBc9jscGc3aL8e7JuG8RfhBBOm63waq1q0YM+U=
 github.com/avast/retry-go/v4 v4.5.1 h1:AxIx0HGi4VZ3I02jr78j5lZ3M6x1E0Ivxa6b0pUUh7o=
 github.com/avast/retry-go/v4 v4.5.1/go.mod h1:/sipNsvNB3RRuT5iNcb6h73nw3IBmXJ/H3XrCQYSOpc=
 github.com/aws/aws-lambda-go v1.13.3/go.mod h1:4UKl9IzQMoD+QF79YdCuzCwp8VbmG4VAQwij/eHl5CU=

@@ -63,6 +63,7 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.1 // indirect
+	github.com/ava-labs/coreth v0.12.10-rc.5 // indirect
 	github.com/aws/aws-sdk-go v1.45.25 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
@@ -240,9 +241,9 @@ require (
 )
 
 replace (
-	github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240625135826-5fe0326e8ce8
+	github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240705131122-508448301543
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811
-	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.0
+	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20240705131023-9fe1c67b68bc
 	github.com/ethereum/go-ethereum => github.com/ethereum/go-ethereum v1.12.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0 // indirect

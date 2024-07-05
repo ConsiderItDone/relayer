@@ -122,7 +122,7 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 			PublicKeyByte: v.PublicKeyBytes,
 			Weight:        v.Weight,
 			NodeIDs:       [][]byte{v.NodeIDs[0].Bytes()},
-			EndTime:       time.Time{},
+			//EndTime:       time.Time{},
 		})
 	}
 
