@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/cosmos/relayer/v2/relayer/codecs/ethermint"
 	"github.com/cosmos/relayer/v2/relayer/provider"
@@ -84,6 +85,17 @@ func (a *AvalancheProvider) KeyAddOrRestore(keyName string, coinType uint32, mne
 	var mnemonicStr string
 	var err error
 	algo := keyring.SignatureAlgo(hd.Secp256k1)
+
+	// eth pk
+	if len(mnemonic) == 1 && len(mnemonic[0]) == 64 {
+		pkey, err := crypto.HexToECDSA(mnemonic[0])
+		if err != nil {
+			return nil, err
+		}
+		addr := crypto.PubkeyToAddress(pkey.PublicKey)
+
+		return &provider.KeyOutput{Mnemonic: mnemonicStr, Address: addr.String()}, nil
+	}
 
 	if len(mnemonic) > 0 {
 		mnemonicStr = mnemonic[0]
