@@ -413,8 +413,9 @@ func (a AvalancheProvider) NewClientState(
 	}
 
 	// Create the ClientState we want on 'c' tracking 'dst'
-	return &avaclient.ClientState{
-		ChainId:        dstChainID,
+	cs := &avaclient.ClientState{
+		ChainId:        a.PCfg.BlockchainID,
+		NetworkId:      a.PCfg.NetworkID,
 		TrustLevel:     trustLevel,
 		TrustingPeriod: dstTrustingPeriod,
 		MaxClockDrift:  time.Minute * 10,
@@ -424,9 +425,8 @@ func (a AvalancheProvider) NewClientState(
 			RevisionHeight: dstIBCHeader.Height(),
 		},
 		UpgradePath: defaultUpgradePath,
-		//AllowUpdateAfterExpiry:       allowUpdateAfterExpiry,
-		//AllowUpdateAfterMisbehaviour: allowUpdateAfterMisbehaviour,
-	}, nil
+	}
+	return cs, nil
 }
 
 func (a AvalancheProvider) MsgCreateClient(clientState ibcexported.ClientState, consensusState ibcexported.ConsensusState) (provider.RelayerMessage, error) {
