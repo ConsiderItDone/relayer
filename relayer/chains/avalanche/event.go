@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ava-labs/subnet-evm/accounts/abi"
 	evmtypes "github.com/ava-labs/subnet-evm/core/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	connectointypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -257,7 +257,7 @@ func (res *packetInfo) parseChannelAttribute(log *zap.Logger, name, value string
 	var err error
 	switch name {
 	case "data":
-		res.Data = common.Hex2Bytes(value)
+		res.Data = common.FromHex(value)
 	case "timeoutHeight":
 		timeoutSplit := strings.Split(value, "-")
 		if len(timeoutSplit) != 2 {
