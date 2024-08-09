@@ -241,7 +241,7 @@ require (
 )
 
 replace (
-	github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240806092351-04a8f21224b2
+	github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240809135514-63db363b20f7
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811
 	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20240806092051-0a5c4205b2c7
 	github.com/ethereum/go-ethereum => github.com/ethereum/go-ethereum v1.12.0

@@ -1169,8 +1169,8 @@ github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbi
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20240806092051-0a5c4205b2c7 h1:P+r7mFNK9O3LWJD8hCwK4gk+zJu9iXPofXNHgnV9xIU=
 github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20240806092051-0a5c4205b2c7/go.mod h1:Z4BmDREfLqv6nFWjT4Hj1IG0jtBpYDRIem9tNXig4YE=
-github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240806092351-04a8f21224b2 h1:XrelTPFoYkwq3r91FlxcNEAIesNsQINqBesPX9nYTx8=
-github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240806092351-04a8f21224b2/go.mod h1:5NXqpMGoTfMY+I+XZQ8NCUL5oKf6TMzpSjxfbDJpZWM=
+github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240809135514-63db363b20f7 h1:vyZrBBCb6RJcmSYldwO147jaH3ey1UjRhPJ8CkmEDsM=
+github.com/ConsiderItDone/subnet-evm-private v0.0.0-20240809135514-63db363b20f7/go.mod h1:5NXqpMGoTfMY+I+XZQ8NCUL5oKf6TMzpSjxfbDJpZWM=
 github.com/DataDog/datadog-go v3.2.0+incompatible h1:qSG2N4FghB1He/r2mFrWKCaL7dXCilEuNEeAn20fdD4=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/DataDog/zstd v1.5.5 h1:oWf5W7GtOLgp6bciQYDmhHHjdhYkALu6S/5Ni9ZgSvQ=
