@@ -195,10 +195,11 @@ func CreateClient(
 	if !override {
 		// Check if an identical light client already exists on the src chain which matches the
 		// proposed new client state from dst.
-		clientID, err = findMatchingClient(ctx, src, dst, clientState)
-		if err != nil {
-			return "", fmt.Errorf("failed to find a matching client for the new client state: %w", err)
-		}
+		// TODO
+		//clientID, err = findMatchingClient(ctx, src, dst, clientState)
+		//if err != nil {
+		//	return "", fmt.Errorf("failed to find a matching client for the new client state: %w", err)
+		//}
 	}
 
 	if clientID != "" && !override {

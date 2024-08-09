@@ -653,13 +653,14 @@ func (pathEnd *pathEndRuntime) shouldSendConnectionMessage(message connectionIBC
 	if eventType != conntypes.EventTypeConnectionOpenInit {
 		k = k.Counterparty()
 	}
-	if message.info.Height >= counterparty.latestBlock.Height {
-		pathEnd.log.Debug("Waiting to relay connection message until counterparty height has incremented",
-			zap.Inline(k),
-			zap.String("event_type", eventType),
-		)
-		return false
-	}
+	// TODO
+	//if message.info.Height >= counterparty.latestBlock.Height {
+	//	pathEnd.log.Debug("Waiting to relay connection message until counterparty height has incremented",
+	//		zap.Inline(k),
+	//		zap.String("event_type", eventType),
+	//	)
+	//	return false
+	//}
 	msgProcessCache, ok := pathEnd.connProcessing[eventType]
 	if !ok {
 		// in progress cache does not exist for this eventType, so can send.

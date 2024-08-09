@@ -18,6 +18,7 @@ _test/keys/
 .vscode/
 dist/
 .release-env
+.fleet
 
 # Don't commit the vendor directory if anyone runs 'go mod vendor'.
 /vendor

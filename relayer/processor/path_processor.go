@@ -415,6 +415,22 @@ func (pp *PathProcessor) Run(ctx context.Context, cancel func()) {
 		}
 
 		if !pp.pathEnd1.inSync || !pp.pathEnd2.inSync {
+			var networkName string
+			var chainId string
+
+			if !pp.pathEnd1.inSync {
+				chainId = pp.pathEnd1.info.ChainID
+			}
+			if !pp.pathEnd2.inSync {
+				chainId = pp.pathEnd2.info.ChainID
+			}
+			if chainId == "99999" {
+				networkName = "Avalanche"
+			}
+			if chainId == "ibcgo" {
+				networkName = "Cosmos"
+			}
+			pp.log.Debug(fmt.Sprintf("%s network is not synced", networkName))
 			continue
 		}
 
@@ -428,6 +444,8 @@ func (pp *PathProcessor) Run(ctx context.Context, cancel func()) {
 
 		// process latest message cache state from both pathEnds
 		if err := pp.processLatestMessages(ctx, cancel); err != nil {
+			pp.log.Error("Failed to process latest messages", zap.Error(err))
+
 			// in case of IBC message send errors, schedule retry after durationErrorRetry
 			if retryTimer != nil {
 				retryTimer.Stop()

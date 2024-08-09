@@ -11,10 +11,11 @@ import (
 	"github.com/avast/retry-go/v4"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	"go.uber.org/zap"
+	"github.com/cosmos/relayer/v2/relayer/chains/avalanche"
 	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	penumbraprocessor "github.com/cosmos/relayer/v2/relayer/chains/penumbra"
 	"github.com/cosmos/relayer/v2/relayer/processor"
-	"go.uber.org/zap"
 )
 
 // ActiveChannel represents an IBC channel and whether there is an active goroutine relaying packets against it.
@@ -145,6 +146,8 @@ func (c *Chain) chainProcessor(
 		return penumbraprocessor.NewPenumbraChainProcessor(log, p)
 	case *cosmos.CosmosProvider:
 		return cosmos.NewCosmosChainProcessor(log, p, metrics)
+	case *avalanche.AvalancheProvider:
+		return avalanche.NewAvalancheChainProcessor(log, p)
 	default:
 		panic(fmt.Errorf("unsupported chain provider type: %T", c.ChainProvider))
 	}

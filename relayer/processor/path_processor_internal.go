@@ -693,9 +693,21 @@ ClientICQLoop:
 // with the latest client state, which will be used for constructing MsgUpdateClient messages.
 func (pp *PathProcessor) updateClientTrustedState(src *pathEndRuntime, dst *pathEndRuntime) {
 	if src.clientTrustedState.ClientState.ConsensusHeight.GTE(src.clientState.ConsensusHeight) {
+		pp.log.Debug("Current height already trusted",
+			zap.String("chain_id", src.info.ChainID),
+			zap.String("client_id", src.info.ClientID),
+			zap.Uint64("height", src.clientState.ConsensusHeight.RevisionHeight),
+			zap.Uint64("trusted_height", src.clientTrustedState.ClientState.ConsensusHeight.RevisionHeight),
+		)
 		// current height already trusted
 		return
 	}
+	pp.log.Debug("Current height not yet trusted",
+		zap.String("chain_id", src.info.ChainID),
+		zap.String("client_id", src.info.ClientID),
+		zap.Uint64("height", src.clientState.ConsensusHeight.RevisionHeight),
+		zap.Uint64("trusted_height", src.clientTrustedState.ClientState.ConsensusHeight.RevisionHeight),
+	)
 	// need to assemble new trusted state
 	ibcHeader, ok := dst.ibcHeaderCache[src.clientState.ConsensusHeight.RevisionHeight+1]
 	if !ok {

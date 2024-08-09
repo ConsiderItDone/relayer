@@ -8,8 +8,8 @@ import (
 	localhost "github.com/cosmos/ibc-go/v8/modules/light-clients/09-localhost"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
-
 	tmlightclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 )
 
 // AppModuleBasic defines the basic application module used by the module.
@@ -26,6 +26,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(*codec.LegacyAmino) {}
 // RegisterInterfaces registers module concrete types into protobuf Any.
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	tmlightclient.RegisterInterfaces(registry)
+	avalanche.RegisterInterfaces(registry)
 	solomachine.RegisterInterfaces(registry)
 	localhost.RegisterInterfaces(registry)
 }

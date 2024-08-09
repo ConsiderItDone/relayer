@@ -11,7 +11,10 @@ import (
 	legacyerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -102,7 +105,9 @@ func (mp *messageProcessor) processMessages(
 	// Localhost IBC does not permit client updates
 	if !isLocalhostClient(src.clientState.ClientID, dst.clientState.ClientID) {
 		var err error
-		needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
+		needsClientUpdate = false
+		// TODO: uncomment next line
+		// needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
 		if err != nil {
 			return err
 		}
@@ -136,6 +141,8 @@ func (mp *messageProcessor) shouldUpdateClientNow(ctx context.Context, src, dst 
 	if dst.clientState.ConsensusTime.IsZero() {
 		h, err := src.chainProvider.QueryIBCHeader(ctx, int64(dst.clientState.ConsensusHeight.RevisionHeight))
 		if err != nil {
+			// TODO
+			//return false, nil
 			return false, fmt.Errorf("failed to get header height: %w", err)
 		}
 		consensusHeightTime = time.Unix(0, int64(h.ConsensusState().GetTimestamp()))
@@ -307,6 +314,19 @@ func (mp *messageProcessor) assembleMsgUpdateClient(ctx context.Context, src, ds
 		trustedConsensusHeight,
 		dst.clientTrustedState.IBCHeader,
 	)
+	// avalanche
+	if src.info.ChainID == "99999" {
+		avaHeader := msgUpdateClientHeader.(*avaclient.Header)
+		mp.log.Info("constructed MsgUpdateClientHeader from avalanche for cosmos",
+			zap.String("subnet_header", avaHeader.SubnetHeader.Height.String()),
+		)
+	}
+	if src.info.ChainID == "ibcgo" {
+		tmHeader := msgUpdateClientHeader.(*tmclient.Header)
+		mp.log.Info("constructed MsgUpdateClientHeader from cosmos for avalanche",
+			zap.Int64("height", tmHeader.Header.Height),
+		)
+	}
 	if err != nil {
 		return fmt.Errorf("error assembling new client header: %w", err)
 	}

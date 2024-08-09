@@ -6,8 +6,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 type CosmosMessage struct {
@@ -37,6 +38,7 @@ func CosmosMsgs(rm ...provider.RelayerMessage) []sdk.Msg {
 	for _, rMsg := range rm {
 		if val, ok := rMsg.(CosmosMessage); !ok {
 			fmt.Printf("got data of type %T but wanted provider.CosmosMessage \n", rMsg)
+			continue
 			return nil
 		} else {
 			sdkMsgs = append(sdkMsgs, val.Msg)

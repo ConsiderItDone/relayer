@@ -3,11 +3,10 @@ package relayer
 import (
 	"context"
 	"time"
-
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	"go.uber.org/zap"
 	"github.com/cosmos/relayer/v2/relayer/processor"
 	"github.com/cosmos/relayer/v2/relayer/provider"
-	"go.uber.org/zap"
 )
 
 // CreateOpenConnections runs the connection creation messages on timeout until they pass.
