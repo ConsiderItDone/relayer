@@ -1,6 +1,7 @@
 package avalanche
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -26,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"go.uber.org/zap"
 
+	"github.com/cosmos/relayer/v2/relayer/chains/avalanche/transferrer"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
@@ -362,7 +364,12 @@ func (a AvalancheProvider) signTx(input []byte) (*evmtypes.Transaction, error) {
 		rawTx *evmtypes.Transaction
 		err   error
 	)
+
 	contractAddress := common.HexToAddress(a.PCfg.ContractAddress)
+	if bytes.HasPrefix(input, common.Hex2Bytes("2c4a1bee")) {
+		contractAddress = common.HexToAddress(a.PCfg.TransferrerAddress)
+	}
+
 	// get last header
 	if head, errHead := a.ethClient.HeaderByNumber(ensureContext(a.txAuth.Context), nil); errHead != nil {
 		return nil, errHead
@@ -850,26 +857,34 @@ func (a AvalancheProvider) NextSeqRecv(ctx context.Context, msgTransfer provider
 }
 
 func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info provider.PacketInfo) (provider.RelayerMessage, error) {
+	abi, err := transferrer.TransferrerMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
 	packetData, _ := json.Marshal(FungibleTokenPacketData{
 		Denom:    amount.Denom,
 		Amount:   amount.Amount.String(),
 		Sender:   a.txAuth.From.Hex(),
 		Receiver: dstAddr,
 	})
-	msg, err := ibc.PackSendPacket(ibc.MsgSendPacket{
-		ChannelCapability: big.NewInt(0),
-		SourcePort:        info.SourcePort,
-		SourceChannel:     info.SourceChannel,
-		TimeoutHeight: ibc.Height{
+
+	msg, err := abi.Pack(
+		"transfer",
+		big.NewInt(0),
+		info.SourcePort,
+		info.SourceChannel,
+		transferrer.Height{
 			RevisionHeight: big.NewInt(int64(info.TimeoutHeight.RevisionHeight)),
 			RevisionNumber: big.NewInt(int64(info.TimeoutHeight.RevisionNumber)),
 		},
-		TimeoutTimestamp: big.NewInt(int64(info.TimeoutTimestamp)),
-		Data:             packetData,
-	})
+		big.NewInt(int64(info.TimeoutTimestamp)),
+		packetData,
+	)
 	if err != nil {
 		return nil, err
 	}
+
 	return NewEVMMessage(msg), nil
 }
 
