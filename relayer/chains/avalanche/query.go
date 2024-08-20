@@ -29,9 +29,10 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	tendermint "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	avalanche "github.com/cosmos/ibc-go/v7/modules/light-clients/14-avalanche"
+	"golang.org/x/exp/maps"
+
 	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 	"github.com/cosmos/relayer/v2/relayer/provider"
-	"golang.org/x/exp/maps"
 )
 
 func (a AvalancheProvider) QueryTx(ctx context.Context, hashHex string) (*provider.RelayerTxResponse, error) {
@@ -399,9 +400,37 @@ func (a AvalancheProvider) QueryClients(ctx context.Context) (clienttypes.Identi
 	panic("implement me")
 }
 
-func (a AvalancheProvider) QueryConnection(ctx context.Context, height int64, connectionid string) (*conntypes.QueryConnectionResponse, error) {
-	//TODO implement me
-	panic("implement me")
+func (a AvalancheProvider) QueryConnection(ctx context.Context, height int64, connectionID string) (*conntypes.QueryConnectionResponse, error) {
+	rawConnection, err := a.ibcContract.QueryConnection(&bind.CallOpts{BlockNumber: big.NewInt(height)}, connectionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection %s from Avalanche: %w", connectionID, err)
+	}
+
+	var conn conntypes.ConnectionEnd
+	if err := conn.Unmarshal(rawConnection); err != nil {
+		return nil, fmt.Errorf("failed to umarshal Connection %s: %w", connectionID, err)
+	}
+
+	// query connection proofs
+	connectionSlot := ibc.ConnectionSlot(connectionID).Hex()
+	proofs, err := a.subnetClient.GetProof(ctx, ibc.ContractAddress, []string{connectionSlot}, big.NewInt(height))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query connection proofs (%s) at height %d: %w", connectionID, height, err)
+	}
+
+	connStateProof, err := proofToBytes(proofs.StorageProof[0].Proof)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert connection proof to bytes: %w", err)
+	}
+
+	return &conntypes.QueryConnectionResponse{
+		Connection: &conn,
+		Proof:      connStateProof,
+		ProofHeight: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: uint64(height),
+		},
+	}, nil
 }
 
 func (a AvalancheProvider) QueryConnections(ctx context.Context) ([]*conntypes.IdentifiedConnection, error) {
