@@ -4,18 +4,27 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
-type EVMMessage struct {
-	input []byte
-}
+type (
+	EVMMessage struct {
+		input   []byte
+		msgType string
+	}
+)
 
-func NewEVMMessage(input []byte) provider.RelayerMessage {
+const (
+	Warp     = "Warp"
+	Transfer = "Transfer"
+)
+
+func NewEVMMessage(input []byte, msgType string) provider.RelayerMessage {
 	return EVMMessage{
-		input: input,
+		input:   input,
+		msgType: msgType,
 	}
 }
 
 func (em EVMMessage) Type() string {
-	return ""
+	return em.msgType
 }
 
 func (em EVMMessage) MsgBytes() ([]byte, error) {

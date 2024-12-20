@@ -1,7 +1,6 @@
 package avalanche
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"go.uber.org/zap"
 
-	"github.com/cosmos/relayer/v2/relayer/chains/avalanche/transferrer"
+	ics20banktransferapp "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ICS20BankTransferApp"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
@@ -92,7 +91,7 @@ func (a AvalancheProvider) waitForTx(
 		a.log.Error("Failed to wait for block inclusion", zap.Error(err))
 		if len(callbacks) > 0 {
 			for _, cb := range callbacks {
-				//Call each callback in order since waitForTx is already invoked asyncronously
+				// Call each callback in order since waitForTx is already invoked asyncronously
 				cb(nil, err)
 			}
 		}
@@ -104,7 +103,7 @@ func (a AvalancheProvider) waitForTx(
 		a.log.Error("Failed to parse receipt events", zap.Error(err))
 		if len(callbacks) > 0 {
 			for _, cb := range callbacks {
-				//Call each callback in order since waitForTx is already invoked asyncronously
+				// Call each callback in order since waitForTx is already invoked asyncronously
 				cb(nil, err)
 			}
 		}
@@ -123,7 +122,7 @@ func (a AvalancheProvider) waitForTx(
 
 	if len(callbacks) > 0 {
 		for _, cb := range callbacks {
-			//Call each callback in order since waitForTx is already invoked asyncronously
+			// Call each callback in order since waitForTx is already invoked asyncronously
 			cb(rlyResp, nil)
 		}
 	}
@@ -199,12 +198,7 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 	for i := range msgs {
 		waiter <- struct{}{}
 
-		input, err := msgs[i].MsgBytes()
-		if err != nil {
-			return err
-		}
-
-		signedTx, err := a.signTx(input)
+		signedTx, err := a.signTx(msgs[i])
 		if err != nil {
 			return err
 		}
@@ -358,15 +352,20 @@ func (a AvalancheProvider) estimateGasLimit(opts *bind.TransactOpts, contract *c
 	return a.ethClient.EstimateGas(ensureContext(opts.Context), msg)
 }
 
-func (a AvalancheProvider) signTx(input []byte) (*evmtypes.Transaction, error) {
+func (a AvalancheProvider) signTx(msg provider.RelayerMessage) (*evmtypes.Transaction, error) {
 	// Create the transaction
 	var (
 		rawTx *evmtypes.Transaction
 		err   error
 	)
 
+	input, err := msg.MsgBytes()
+	if err != nil {
+		return nil, err
+	}
+
 	contractAddress := common.HexToAddress(a.PCfg.ContractAddress)
-	if bytes.HasPrefix(input, common.Hex2Bytes("2c4a1bee")) {
+	if msg.Type() == Transfer {
 		contractAddress = common.HexToAddress(a.PCfg.TransferrerAddress)
 	}
 
@@ -467,7 +466,7 @@ func (a AvalancheProvider) MsgCreateClient(clientState ibcexported.ClientState, 
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgUpgradeClient(srcClientId string, consRes *clienttypes.QueryConsensusStateResponse, clientRes *clienttypes.QueryClientStateResponse) (provider.RelayerMessage, error) {
@@ -501,7 +500,7 @@ func (a AvalancheProvider) MsgUpgradeClient(srcClientId string, consRes *clientt
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgUpdateClient(clientID string, dstHeader ibcexported.ClientMessage) (provider.RelayerMessage, error) {
@@ -524,7 +523,7 @@ func (a AvalancheProvider) MsgUpdateClient(clientID string, dstHeader ibcexporte
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgChannelOpenInit(info provider.ChannelInfo, proof provider.ChannelProof) (provider.RelayerMessage, error) {
@@ -553,7 +552,7 @@ func (a AvalancheProvider) MsgChannelOpenInit(info provider.ChannelInfo, proof p
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgChannelOpenTry(msgOpenInit provider.ChannelInfo, proof provider.ChannelProof) (provider.RelayerMessage, error) {
@@ -590,7 +589,7 @@ func (a AvalancheProvider) MsgChannelOpenTry(msgOpenInit provider.ChannelInfo, p
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgChannelOpenAck(msgOpenTry provider.ChannelInfo, proof provider.ChannelProof) (provider.RelayerMessage, error) {
@@ -613,7 +612,7 @@ func (a AvalancheProvider) MsgChannelOpenAck(msgOpenTry provider.ChannelInfo, pr
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgChannelOpenConfirm(msgOpenAck provider.ChannelInfo, proof provider.ChannelProof) (provider.RelayerMessage, error) {
@@ -634,7 +633,7 @@ func (a AvalancheProvider) MsgChannelOpenConfirm(msgOpenAck provider.ChannelInfo
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgChannelCloseInit(info provider.ChannelInfo, proof provider.ChannelProof) (provider.RelayerMessage, error) {
@@ -648,7 +647,7 @@ func (a AvalancheProvider) MsgChannelCloseInit(info provider.ChannelInfo, proof 
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgChannelCloseConfirm(msgCloseInit provider.ChannelInfo, proof provider.ChannelProof) (provider.RelayerMessage, error) {
@@ -668,7 +667,7 @@ func (a AvalancheProvider) MsgChannelCloseConfirm(msgCloseInit provider.ChannelI
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgConnectionOpenTry(msgOpenInit provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
@@ -721,17 +720,17 @@ func (a AvalancheProvider) MsgConnectionOpenTry(msgOpenInit provider.ConnectionI
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
-//func (a AvalancheProvider) BlockTime(ctx context.Context, height int64) (time.Time, error) {
+// func (a AvalancheProvider) BlockTime(ctx context.Context, height int64) (time.Time, error) {
 //	block, err := a.ethClient.BlockByNumber(ctx, big.NewInt(height))
 //	if err != nil {
 //		return time.Time{}, err
 //	}
 //
 //	return time.Unix(int64(block.Time()), 0), nil
-//}
+// }
 
 func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
 	avaClientState, ok := proof.ClientState.(*avaclient.ClientState)
@@ -773,7 +772,7 @@ func (a AvalancheProvider) MsgConnectionOpenAck(msgOpenTry provider.ConnectionIn
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgConnectionOpenConfirm(msgOpenAck provider.ConnectionInfo, proof provider.ConnectionProof) (provider.RelayerMessage, error) {
@@ -791,11 +790,11 @@ func (a AvalancheProvider) MsgConnectionOpenConfirm(msgOpenAck provider.Connecti
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgSubmitMisbehaviour(clientID string, misbehaviour ibcexported.ClientMessage) (provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -847,17 +846,17 @@ func (a AvalancheProvider) PacketAcknowledgement(ctx context.Context, msgRecvPac
 }
 
 func (a AvalancheProvider) PacketReceipt(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) NextSeqRecv(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info provider.PacketInfo) (provider.RelayerMessage, error) {
-	abi, err := transferrer.TransferrerMetaData.GetAbi()
+	abi, err := ics20banktransferapp.ICS20BankTransferAppMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -874,7 +873,7 @@ func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info pro
 		big.NewInt(0),
 		info.SourcePort,
 		info.SourceChannel,
-		transferrer.Height{
+		ics20banktransferapp.Height{
 			RevisionHeight: big.NewInt(int64(info.TimeoutHeight.RevisionHeight)),
 			RevisionNumber: big.NewInt(int64(info.TimeoutHeight.RevisionNumber)),
 		},
@@ -885,7 +884,7 @@ func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info pro
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Transfer), nil
 }
 
 func (a AvalancheProvider) MsgRecvPacket(msgTransfer provider.PacketInfo, proof provider.PacketProof) (provider.RelayerMessage, error) {
@@ -913,7 +912,7 @@ func (a AvalancheProvider) MsgRecvPacket(msgTransfer provider.PacketInfo, proof 
 	if err != nil {
 		return nil, err
 	}
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgAcknowledgement(msgRecvPacket provider.PacketInfo, proofAcked provider.PacketProof) (provider.RelayerMessage, error) {
@@ -942,16 +941,16 @@ func (a AvalancheProvider) MsgAcknowledgement(msgRecvPacket provider.PacketInfo,
 	if err != nil {
 		return nil, err
 	}
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) MsgTimeout(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) MsgTimeoutOnClose(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -965,14 +964,14 @@ func (a AvalancheProvider) ConnectionHandshakeProof(ctx context.Context, msgOpen
 		return provider.ConnectionProof{}, fmt.Errorf("unable to query client state at height %d: %w", height, err)
 	}
 
-	//header, err := a.QueryIBCHeader(ctx, int64(height))
-	//if err != nil {
+	// header, err := a.QueryIBCHeader(ctx, int64(height))
+	// if err != nil {
 	//	return provider.ConnectionProof{}, fmt.Errorf("unable to query header at height %d: %w", height, err)
-	//}
-	//avaHeader, ok := header.(AvalancheIBCHeader)
-	//if !ok {
+	// }
+	// avaHeader, ok := header.(AvalancheIBCHeader)
+	// if !ok {
 	//	return provider.ConnectionProof{}, fmt.Errorf("unsupported IBC header type, expected: AvalancheIBCHeader, actual: %T", header)
-	//}
+	// }
 
 	clientStateSlot := ibc.ClientStateSlot(msgOpenInit.ClientID).Hex()
 	consensusStateSlot := ibc.ConsensusStateSlot(msgOpenInit.ClientID, clientState.GetLatestHeight()).Hex()
@@ -1088,7 +1087,7 @@ func (a AvalancheProvider) MsgConnectionOpenInit(info provider.ConnectionInfo, p
 		return nil, err
 	}
 
-	return NewEVMMessage(msg), nil
+	return NewEVMMessage(msg, Warp), nil
 }
 
 func (a AvalancheProvider) ChannelProof(ctx context.Context, msg provider.ChannelInfo, height uint64) (provider.ChannelProof, error) {
@@ -1124,10 +1123,10 @@ func (a AvalancheProvider) ChannelProof(ctx context.Context, msg provider.Channe
 }
 
 func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader, trustedHeight clienttypes.Height, trustedHeader provider.IBCHeader) (ibcexported.ClientMessage, error) {
-	//trustedAvalancheHeader, ok := trustedHeader.(AvalancheIBCHeader)
-	//if !ok {
+	// trustedAvalancheHeader, ok := trustedHeader.(AvalancheIBCHeader)
+	// if !ok {
 	//	return nil, fmt.Errorf("unsupported IBC trusted header type, expected: AvalancheIBCHeader, actual: %T", trustedHeader)
-	//}
+	// }
 
 	latestAvalancheHeader, ok := latestHeader.(AvalancheIBCHeader)
 	if !ok {
@@ -1135,7 +1134,7 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 	}
 
 	latestAvalancheHeight := latestAvalancheHeader.Height()
-	//trustedAvalancheHeight := trustedAvalancheHeader.Height()
+	// trustedAvalancheHeight := trustedAvalancheHeader.Height()
 
 	return &avaclient.Header{
 		PrevSubnetHeader: &avaclient.SubnetHeader{
@@ -1166,7 +1165,7 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 		},
 		StorageRoot:       latestAvalancheHeader.EthHeader.Root.Bytes(),
 		SignedStorageRoot: latestAvalancheHeader.SignedStorageRoot[:],
-		//ValidatorSet:       latestAvalancheHeader.ValidatorSet,
+		// ValidatorSet:       latestAvalancheHeader.ValidatorSet,
 		SignedValidatorSet: latestAvalancheHeader.SignedValidatorSet[:],
 		Vdrs:               latestAvalancheHeader.Vdrs,
 		SignersInput:       latestAvalancheHeader.SignersInput,
@@ -1174,26 +1173,26 @@ func (a AvalancheProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader
 }
 
 func (a AvalancheProvider) QueryICQWithProof(ctx context.Context, msgType string, request []byte, height uint64) (provider.ICQProof, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) MsgSubmitQueryResponse(chainID string, queryID provider.ClientICQQueryID, proof provider.ICQProof) (provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) RelayPacketFromSequence(ctx context.Context, src provider.ChainProvider, srch, dsth, seq uint64, srcChanID, srcPortID string, order chantypes.Order) (provider.RelayerMessage, provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) AcknowledgementFromSequence(ctx context.Context, dst provider.ChainProvider, dsth, seq uint64, dstChanID, dstPortID, srcChanID, srcPortID string) (provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) MsgRegisterCounterpartyPayee(portID, channelID, relayerAddr, counterpartyPayeeAddr string) (provider.RelayerMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
