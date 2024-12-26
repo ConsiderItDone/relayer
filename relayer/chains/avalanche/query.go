@@ -18,6 +18,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/utils"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
+	platformapi "github.com/ava-labs/avalanchego/vms/platformvm/api"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp/payload"
 	"github.com/ava-labs/subnet-evm/accounts/abi/bind"
@@ -88,7 +89,7 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 	}
 
 	// query P-Chain validators at specific height
-	vdrSet, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, pChainHeight)
+	vdrSet, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, platformapi.Height(pChainHeight))
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -99,7 +100,7 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 			continue
 		}
 
-		pkBytes := bls.PublicKeyToBytes(vdr.PublicKey)
+		pkBytes := bls.PublicKeyToCompressedBytes(vdr.PublicKey)
 		uniqueVdr, ok := vdrs[string(pkBytes)]
 		if !ok {
 			uniqueVdr = &Validator{

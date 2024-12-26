@@ -1,0 +1,32 @@
+#!/bin/bash
+# ./build/simd ibc-1 ./data 26657 26656 6060 9090 stake lnd
+display_usage() {
+  echo "\nMissing $1 parameter. Please check if all parameters were specified."
+  echo "\nUsage: ./start_chain.sh [BINARY] [CHAIN_ID] [CHAIN_DIR] [GRPC_PORT]"
+  echo "\nExample: ./start_chain.sh ./build/simd ibc-1 ./data 9090 \n"
+  exit 1
+}
+
+BINARY=$1
+CHAINID=$2
+CHAINDIR=$3
+GRPCPORT=$4
+
+if [ -z "$1" ]; then
+  display_usage "[BINARY] ($BINARY|simd)"
+fi
+
+if [ -z "$2" ]; then
+  display_usage "[CHAIN_ID]"
+fi
+
+if [ -z "$3" ]; then
+  display_usage "[CHAIN_DIR]"
+fi
+
+if [ -z "$4" ]; then
+  display_usage "[GRPC_PORT]"
+fi
+
+# Start the node
+$BINARY --home $CHAINDIR/$CHAINID start --pruning=nothing --grpc-web.enable=false --grpc.address="0.0.0.0:$GRPCPORT" > $CHAINDIR/$CHAINID.log 2>&1 &
