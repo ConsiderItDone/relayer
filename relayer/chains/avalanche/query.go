@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
+
 	"math/big"
 	"strconv"
 	"strings"
@@ -16,6 +16,7 @@ import (
 	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ethereum/go-ethereum/common"
+	"golang.org/x/exp/maps"
 
 	"github.com/ava-labs/avalanchego/utils"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
@@ -59,6 +60,9 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 	}
 
 	validatorSet, vdrs, pChainHeight, err := a.avalancheValidatorSet(ctx, ethHeader.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
 
 	signedStorageRoot, _, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
 	if err != nil {
