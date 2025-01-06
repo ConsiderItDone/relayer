@@ -204,6 +204,11 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 		}
 
 		err = a.broadcastTx(ctx, signedTx, asyncCtx, callback(i))
+		a.log.Info("Avalanche tx broadcasted",
+			zap.String("type", msgs[i].Type()),
+			zap.String("tx_hash", signedTx.Hash().String()),
+			zap.Error(err),
+		)
 		if err != nil {
 			return err
 		}

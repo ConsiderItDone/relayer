@@ -46,3 +46,20 @@ func TestKeyRestore(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedAddress, address)
 }
+
+// TestKeyRestore restores a test mnemonic
+func TestKeyRestorePrivateKey(t *testing.T) {
+	const (
+		keyName            = "test_key"
+		signatureAlgorithm = "secp256k1"
+		mnemonic           = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
+		expectedAddress    = "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"
+		coinType           = uint32(60)
+	)
+
+	p := testProviderWithKeystore(t, []string{"ethermint"})
+
+	address, err := p.RestoreKey(keyName, mnemonic, coinType, signatureAlgorithm)
+	require.NoError(t, err)
+	require.Equal(t, expectedAddress, address)
+}

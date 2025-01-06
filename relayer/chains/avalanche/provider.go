@@ -135,12 +135,12 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 
 	subnetID, err := ids.FromString(a.PCfg.SubnetID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse SubnetID %s %w", a.PCfg.SubnetID, err)
 	}
 
 	blockchainID, err := ids.FromString(a.PCfg.BlockchainID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse BlockchainID %s %w", a.PCfg.BlockchainID, err)
 	}
 
 	ibcContract, err := ibccontract.NewIBC(ibc.ContractAddress, a.ethClient)

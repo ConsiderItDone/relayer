@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"math/big"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ethereum/go-ethereum/common"
+	"golang.org/x/exp/maps"
 
 	"github.com/ava-labs/avalanchego/utils"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
@@ -32,7 +34,6 @@ import (
 	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
 	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 	"github.com/cosmos/relayer/v2/relayer/provider"
-	"golang.org/x/exp/maps"
 )
 
 func (a AvalancheProvider) QueryTx(ctx context.Context, hashHex string) (*provider.RelayerTxResponse, error) {
@@ -59,6 +60,9 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 	}
 
 	validatorSet, vdrs, pChainHeight, err := a.avalancheValidatorSet(ctx, ethHeader.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
 
 	signedStorageRoot, _, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
 	if err != nil {
@@ -400,9 +404,37 @@ func (a AvalancheProvider) QueryClients(ctx context.Context) (clienttypes.Identi
 	panic("implement me")
 }
 
-func (a AvalancheProvider) QueryConnection(ctx context.Context, height int64, connectionid string) (*conntypes.QueryConnectionResponse, error) {
-	//TODO implement me
-	panic("implement me")
+func (a AvalancheProvider) QueryConnection(ctx context.Context, height int64, connectionID string) (*conntypes.QueryConnectionResponse, error) {
+	rawConnection, err := a.ibcContract.QueryConnection(&bind.CallOpts{BlockNumber: big.NewInt(height)}, connectionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection %s from Avalanche: %w", connectionID, err)
+	}
+
+	var conn conntypes.ConnectionEnd
+	if err := conn.Unmarshal(rawConnection); err != nil {
+		return nil, fmt.Errorf("failed to umarshal Connection %s: %w", connectionID, err)
+	}
+
+	// query connection proofs
+	connectionSlot := ibc.ConnectionSlot(connectionID).Hex()
+	proofs, err := a.subnetClient.GetProof(ctx, ibc.ContractAddress, []string{connectionSlot}, big.NewInt(height))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query connection proofs (%s) at height %d: %w", connectionID, height, err)
+	}
+
+	connStateProof, err := proofToBytes(proofs.StorageProof[0].Proof)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert connection proof to bytes: %w", err)
+	}
+
+	return &conntypes.QueryConnectionResponse{
+		Connection: &conn,
+		Proof:      connStateProof,
+		ProofHeight: clienttypes.Height{
+			RevisionNumber: 0,
+			RevisionHeight: uint64(height),
+		},
+	}, nil
 }
 
 func (a AvalancheProvider) QueryConnections(ctx context.Context) ([]*conntypes.IdentifiedConnection, error) {

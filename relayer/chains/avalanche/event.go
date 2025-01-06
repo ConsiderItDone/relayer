@@ -3,7 +3,6 @@ package avalanche
 import (
 	"errors"
 	"fmt"
-
 	"strconv"
 	"strings"
 	"time"
