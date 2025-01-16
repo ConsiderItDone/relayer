@@ -2,6 +2,7 @@ package avalanche
 
 import (
 	"context"
+	"crypto/ecdsa"
 	_ "embed"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"github.com/ava-labs/subnet-evm/rpc"
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/gogoproto/proto"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
@@ -69,7 +71,7 @@ func (h AvalancheIBCHeader) ConsensusState() ibcexported.ConsensusState {
 		Timestamp:         time.Unix(int64(h.EthHeader.Time), 0),
 		StorageRoot:       h.EthHeader.Root.Bytes(),
 		SignedStorageRoot: h.SignedStorageRoot[:],
-		//ValidatorSet:       h.ValidatorSet,
+		// ValidatorSet:       h.ValidatorSet,
 		SignedValidatorSet: h.SignedValidatorSet[:],
 		Vdrs:               h.Vdrs,
 		SignersInput:       h.SignersInput,
@@ -109,21 +111,31 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	a.ethClient = ethclient.NewClient(rpcClient)
 	a.subnetClient = subnetevmclient.New(rpcClient)
 	a.pClient = platformvm.NewClient(a.PCfg.BaseRPCAddr)
-	ibcClient, err := NewIbcClient(a.PCfg.RPCAddr)
-	a.ibcClient = ibcClient
+	a.ibcClient, err = NewIbcClient(a.PCfg.RPCAddr)
+	a.Keybase, err = keyring.New(
+		a.PCfg.ChainID,
+		a.PCfg.KeyringBackend,
+		a.PCfg.KeyDirectory,
+		a.Input,
+		a.Codec.Marshaler,
+		a.KeyringOptions...,
+	)
+	if err != nil {
+		return err
+	}
+
+	ethPrivKey, err := a.GetPrivKey(a.Key())
+	if err != nil {
+		ethPrivKey = tempKey
+	}
 
 	chainId, ok := new(big.Int).SetString(a.PCfg.ChainID, 10)
 	if !ok {
 		return fmt.Errorf("invalid chain id %s", a.PCfg.ChainID)
 	}
 
-	a.txAuth, err = bind.NewKeyedTransactorWithChainID(tempKey, chainId)
+	a.txAuth, err = bind.NewKeyedTransactorWithChainID(ethPrivKey, chainId)
 	a.txAuth.GasLimit = 1000000
-	if err != nil {
-		return err
-	}
-
-	keybase, err := keyring.New(a.PCfg.ChainID, a.PCfg.KeyringBackend, a.PCfg.KeyDirectory, a.Input, a.Codec.Marshaler, a.KeyringOptions...)
 	if err != nil {
 		return err
 	}
@@ -148,13 +160,41 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 		return err
 	}
 
-	a.Keybase = keybase
 	a.abi = contractAbi
 	a.subnetID = subnetID
 	a.blockchainID = blockchainID
 	a.ibcContract = ibcContract
 
 	return nil
+}
+
+// GetPrivKey extracts a private key from a keyring record
+func (a AvalancheProvider) GetPrivKey(name string) (*ecdsa.PrivateKey, error) {
+	info, err := a.Keybase.Key(name)
+	if err != nil {
+		return nil, err
+	}
+
+	local := info.GetLocal()
+	if local == nil {
+		return nil, fmt.Errorf("key is not a local key")
+	}
+
+	if local.PrivKey == nil {
+		return nil, fmt.Errorf("private key not available in record")
+	}
+
+	priv, ok := local.PrivKey.GetCachedValue().(cryptotypes.PrivKey)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast private key to cryptotypes.PrivKey")
+	}
+
+	ethPrivKey, err := crypto.ToECDSA(priv.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert private key to ECDSA: %w", err)
+	}
+
+	return ethPrivKey, nil
 }
 
 func (a AvalancheProvider) SetRpcAddr(rpcAddr string) error {
@@ -188,16 +228,17 @@ func (a AvalancheProvider) Key() string {
 }
 
 func (a AvalancheProvider) Address() (string, error) {
-	info, err := a.Keybase.Key(a.PCfg.Key)
+	ethPrivKey, err := a.GetPrivKey(a.Key())
 	if err != nil {
 		return "", err
 	}
 
-	acc, err := info.GetAddress()
-	if err != nil {
-		return "", err
+	publicKeyECDSA, ok := ethPrivKey.Public().(*ecdsa.PublicKey)
+	if !ok {
+		return "", fmt.Errorf("error casting public key to ECDSA")
 	}
-	out := a.EncodeAccAddr(acc)
+
+	out := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
 
 	return out, nil
 }

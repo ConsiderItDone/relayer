@@ -11,7 +11,7 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
-func testProviderWithKeystore(t *testing.T, extraCodecs []string) provider.ChainProvider {
+func testProviderWithKeystore(t *testing.T) provider.ChainProvider {
 	homePath := t.TempDir()
 	cfg := avalanche.AvalancheProviderConfig{
 		ChainID:        "test",
@@ -36,11 +36,11 @@ func TestKeyRestore(t *testing.T) {
 		keyName            = "test_key"
 		signatureAlgorithm = "secp256k1"
 		mnemonic           = "three elevator silk family street child flip also leaf inmate call frame shock little legal october vivid enable fetch siege sell burger dolphin green"
-		expectedAddress    = "0x6E7BE67F3619731AB38875999873E8FACE935735"
-		coinType           = uint32(60)
+		expectedAddress    = "0x836E7e82deDE708Ba83ADe38216F5e30AC0fFB03"
+		coinType           = uint32(118)
 	)
 
-	p := testProviderWithKeystore(t, []string{"ethermint"})
+	p := testProviderWithKeystore(t)
 
 	address, err := p.RestoreKey(keyName, mnemonic, coinType, signatureAlgorithm)
 	require.NoError(t, err)
@@ -54,10 +54,10 @@ func TestKeyRestorePrivateKey(t *testing.T) {
 		signatureAlgorithm = "secp256k1"
 		mnemonic           = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 		expectedAddress    = "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"
-		coinType           = uint32(60)
+		coinType           = uint32(118)
 	)
 
-	p := testProviderWithKeystore(t, []string{"ethermint"})
+	p := testProviderWithKeystore(t)
 
 	address, err := p.RestoreKey(keyName, mnemonic, coinType, signatureAlgorithm)
 	require.NoError(t, err)
