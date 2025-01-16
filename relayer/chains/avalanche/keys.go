@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cometbft/cometbft/libs/bytes"
 	ckeys "github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -41,7 +39,14 @@ func KeyringAlgoOptions() keyring.Option {
 
 // CreateKeystore initializes a new instance of a keyring at the specified path in the local filesystem.
 func (a *AvalancheProvider) CreateKeystore(_ string) error {
-	keybase, err := keyring.New(a.PCfg.ChainID, a.PCfg.KeyringBackend, a.PCfg.KeyDirectory, a.Input, a.Codec.Marshaler, KeyringAlgoOptions())
+	keybase, err := keyring.New(
+		a.PCfg.ChainID,
+		a.PCfg.KeyringBackend,
+		a.PCfg.KeyDirectory,
+		a.Input,
+		a.Codec.Marshaler,
+		a.KeyringOptions...,
+	)
 	if err != nil {
 		return err
 	}
@@ -110,33 +115,28 @@ func (a *AvalancheProvider) KeyAddOrRestore(keyName string, coinType uint32, mne
 		algo = keyring.SignatureAlgo(ethermint.EthSecp256k1)
 	}
 
-	info, err := a.Keybase.NewAccount(keyName, mnemonicStr, "", hd.CreateHDPath(coinType, 0, 0).String(), algo)
+	_, err = a.Keybase.NewAccount(
+		keyName,
+		mnemonicStr,
+		"",
+		hd.CreateHDPath(coinType, 0, 0).String(),
+		algo,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	acc, err := info.GetAddress()
+	out, err := a.EncodeAccAddr(keyName)
 	if err != nil {
 		return nil, err
 	}
-	out := a.EncodeAccAddr(acc)
 
 	return &provider.KeyOutput{Mnemonic: mnemonicStr, Address: out}, nil
 }
 
 // ShowAddress retrieves a key by name from the keystore and returns the bech32 encoded string representation of that key.
 func (a *AvalancheProvider) ShowAddress(name string) (address string, err error) {
-	info, err := a.Keybase.Key(name)
-	if err != nil {
-		return "", err
-	}
-	acc, err := info.GetAddress()
-	if err != nil {
-		return "", nil
-	}
-	out := a.EncodeAccAddr(acc)
-
-	return out, nil
+	return a.EncodeAccAddr(name)
 }
 
 // ListAddresses returns a map of bech32 encoded strings representing all keys currently in the keystore.
@@ -147,12 +147,10 @@ func (a *AvalancheProvider) ListAddresses() (map[string]string, error) {
 		return nil, err
 	}
 	for _, k := range info {
-		acc, err := k.GetAddress()
+		addr, err := a.EncodeAccAddr(k.Name)
 		if err != nil {
 			return nil, err
 		}
-		addr := a.EncodeAccAddr(acc)
-
 		out[k.Name] = addr
 	}
 	return out, nil
@@ -198,8 +196,17 @@ func CreateMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-func (a *AvalancheProvider) EncodeAccAddr(addr sdk.AccAddress) string {
-	var data bytes.HexBytes = addr.Bytes()
+// EncodeAccAddr returns the encoded string representation of the account address for the specified key.
+func (a *AvalancheProvider) EncodeAccAddr(name string) (string, error) {
+	old := a.PCfg.Key // save the old key
 
-	return fmt.Sprintf("0x%s", data.String())
+	a.PCfg.Key = name // set the key to the name of the key we want to get the address of
+	address, err := a.Address()
+	if err != nil {
+		return "", err
+	}
+
+	a.PCfg.Key = old // reset the key to the old key
+
+	return fmt.Sprintf("%s", address), nil
 }
