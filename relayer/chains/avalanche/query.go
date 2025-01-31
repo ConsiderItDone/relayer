@@ -5,21 +5,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
 	"cosmossdk.io/math"
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/subnet-evm/interfaces"
 	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ethereum/go-ethereum/common"
+	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
 	"github.com/ava-labs/avalanchego/utils"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
+	avamath "github.com/ava-labs/avalanchego/utils/math"
 	platformapi "github.com/ava-labs/avalanchego/vms/platformvm/api"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp/payload"
@@ -32,17 +34,18 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	tendermint "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
+
 	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 func (a AvalancheProvider) QueryTx(ctx context.Context, hashHex string) (*provider.RelayerTxResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryTxs(ctx context.Context, page, limit int, events []string) ([]*provider.RelayerTxResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -64,14 +67,36 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 		return nil, err
 	}
 
-	signedStorageRoot, _, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
+	signedStorageRoot, signersBits, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	signedValidatorSet, signers, err := a.avalancheBlsSignature(ctx, validatorSet)
+
+	a.log.Info("signersBits", zap.Binary("signersBits", signersBits))
+	signedValidatorSet, signersBitsVals, err := a.avalancheBlsSignature(ctx, validatorSet)
 	if err != nil {
 		return nil, err
 	}
+
+	a.log.Info("signersBitsVals", zap.Binary("signersBitsVals", signersBitsVals))
+	// todo check signature here
+	// avaVdrs, totalWeigth, err := ValidateValidatorSet(context.Background(), vdrs)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// err = avalanche.VerifyBls(
+	// 	signersBits, // signersInput indices
+	// 	signedStorageRoot,
+	// 	ethHeader.Root.Bytes(),
+	// 	avaVdrs,
+	// 	totalWeigth,
+	// 	1,
+	// 	5,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return AvalancheIBCHeader{
 		EthHeader:          ethHeader,
@@ -79,10 +104,59 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 		SignedValidatorSet: signedValidatorSet,
 		ValidatorSet:       validatorSet,
 		Vdrs:               vdrs,
-		SignersInput:       signers,
+		SignersInput:       signersBits,
 		PChainHeight:       pChainHeight,
 	}, nil
 
+}
+
+func ValidateValidatorSet(
+	ctx context.Context,
+	vdrSet []*avalanche.Validator,
+) ([]*warp.Validator, uint64, error) {
+	var (
+		vdrs        = make([]*warp.Validator, len(vdrSet))
+		totalWeight uint64
+		err         error
+	)
+	for i, vdr := range vdrSet {
+		totalWeight, err = avamath.Add64(totalWeight, vdr.Weight)
+		if err != nil {
+			return nil, 0, fmt.Errorf("%w: %v", warp.ErrWeightOverflow, err)
+		}
+
+		if vdr.PublicKeyByte == nil {
+			continue
+		}
+
+		publicKey, err := bls.PublicKeyFromCompressedBytes(vdr.PublicKeyByte)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		warpVdr := &warp.Validator{
+			PublicKey:      publicKey,
+			PublicKeyBytes: vdr.PublicKeyByte,
+			Weight:         vdr.Weight,
+			NodeIDs:        SetNodeIDs(vdr.NodeIDs),
+		}
+		vdrs[i] = warpVdr
+	}
+	utils.Sort(vdrs)
+	return vdrs, totalWeight, nil
+}
+
+func SetNodeIDs(data [][]byte) []ids.NodeID {
+	var (
+		nodeIDs = make([]ids.NodeID, len(data))
+	)
+	for i, b := range data {
+		if len(b) > len(nodeIDs[i]) {
+			b = b[len(b)-len(nodeIDs[i]):]
+		}
+		copy(nodeIDs[i][len(nodeIDs[i])-len(b):], b)
+	}
+	return nodeIDs
 }
 
 func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight uint64) ([]byte, []*avalanche.Validator, uint64, error) {
@@ -111,11 +185,12 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 				PublicKey:      vdr.PublicKey,
 				PublicKeyBytes: pkBytes,
 			}
-			vdrs[string(pkBytes)] = uniqueVdr
 		}
 
 		uniqueVdr.Weight += vdr.Weight // Impossible to overflow here
 		uniqueVdr.NodeIDs = append(uniqueVdr.NodeIDs, vdr.NodeID)
+
+		vdrs[string(pkBytes)] = uniqueVdr
 	}
 	// Sort validators by public key
 	vdrList := maps.Values(vdrs)
@@ -127,7 +202,7 @@ func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight 
 			PublicKeyByte: v.PublicKeyBytes,
 			Weight:        v.Weight,
 			NodeIDs:       [][]byte{v.NodeIDs[0].Bytes()},
-			//EndTime:       time.Time{},
+			// EndTime:       time.Time{},
 		})
 	}
 
@@ -322,7 +397,7 @@ func (a AvalancheProvider) QueryBalance(ctx context.Context, keyName string) (sd
 }
 
 func (a AvalancheProvider) QueryBalanceWithAddress(ctx context.Context, addr string) (sdk.Coins, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -380,27 +455,27 @@ func (a AvalancheProvider) QueryClientStateResponse(ctx context.Context, height 
 }
 
 func (a AvalancheProvider) QueryClientConsensusState(ctx context.Context, chainHeight int64, clientid string, clientHeight ibcexported.Height) (*clienttypes.QueryConsensusStateResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryUpgradedClient(ctx context.Context, height int64) (*clienttypes.QueryClientStateResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryUpgradedConsState(ctx context.Context, height int64) (*clienttypes.QueryConsensusStateResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryConsensusState(ctx context.Context, height int64) (ibcexported.ConsensusState, int64, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryClients(ctx context.Context) (clienttypes.IdentifiedClientStates, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -466,12 +541,12 @@ func (a AvalancheProvider) QueryConnections(ctx context.Context) ([]*conntypes.I
 }
 
 func (a AvalancheProvider) QueryConnectionsUsingClient(ctx context.Context, height int64, clientid string) (*conntypes.QueryConnectionsResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) GenerateConnHandshakeProof(ctx context.Context, height int64, clientId, connId string) (clientState ibcexported.ClientState, clientStateProof []byte, consensusProof []byte, connectionProof []byte, connectionProofHeight ibcexported.Height, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -499,7 +574,7 @@ func (a AvalancheProvider) QueryChannel(ctx context.Context, height int64, chann
 }
 
 func (a AvalancheProvider) QueryChannelClient(ctx context.Context, height int64, channelid, portid string) (*clienttypes.IdentifiedClientState, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -666,47 +741,47 @@ func (a AvalancheProvider) QueryUnreceivedPackets(ctx context.Context, height ui
 }
 
 func (a AvalancheProvider) QueryUnreceivedAcknowledgements(ctx context.Context, height uint64, channelid, portid string, seqs []uint64) ([]uint64, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryNextSeqRecv(ctx context.Context, height int64, channelid, portid string) (recvRes *chantypes.QueryNextSequenceReceiveResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryNextSeqAck(ctx context.Context, height int64, channelid, portid string) (recvRes *chantypes.QueryNextSequenceReceiveResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryPacketCommitment(ctx context.Context, height int64, channelid, portid string, seq uint64) (comRes *chantypes.QueryPacketCommitmentResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryPacketAcknowledgement(ctx context.Context, height int64, channelid, portid string, seq uint64) (ackRes *chantypes.QueryPacketAcknowledgementResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryPacketReceipt(ctx context.Context, height int64, channelid, portid string, seq uint64) (recRes *chantypes.QueryPacketReceiptResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryDenomHash(ctx context.Context, trace string) (string, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryDenomTrace(ctx context.Context, denom string) (*transfertypes.DenomTrace, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (a AvalancheProvider) QueryDenomTraces(ctx context.Context, offset, limit uint64, height int64) ([]transfertypes.DenomTrace, error) {
-	//TODO implement me
+	// TODO implement me
 	return []transfertypes.DenomTrace{
 		transfertypes.DenomTrace{
 			"demo2",

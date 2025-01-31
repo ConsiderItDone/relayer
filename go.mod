@@ -250,6 +250,7 @@ require (
 replace (
 	github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm-private v0.0.0-20241209133549-33e2e99a0a89
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593
-	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20241209122232-7f1c42f21f03
+	//github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20241209122232-7f1c42f21f03
+	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250130095017-1442e862a739
 	google.golang.org/grpc => google.golang.org/grpc v1.63.2
 )
