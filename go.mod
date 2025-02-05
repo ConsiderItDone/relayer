@@ -38,7 +38,6 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
 	golang.org/x/sync v0.8.0
 	golang.org/x/text v0.17.0
 	google.golang.org/grpc v1.66.0
@@ -227,6 +226,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/mock v0.4.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
@@ -250,7 +250,6 @@ require (
 replace (
 	github.com/ava-labs/subnet-evm => github.com/ConsiderItDone/subnet-evm-private v0.0.0-20241209133549-33e2e99a0a89
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593
-	//github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20241209122232-7f1c42f21f03
-	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250130095017-1442e862a739
+	github.com/cosmos/ibc-go/v8 => github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250205145206-d878bb4678cb
 	google.golang.org/grpc => google.golang.org/grpc v1.63.2
 )

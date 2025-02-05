@@ -3,7 +3,6 @@ package avalanche
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -11,29 +10,22 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/subnet-evm/interfaces"
-	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
-	"github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/ethereum/go-ethereum/common"
-	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
-
-	"github.com/ava-labs/avalanchego/utils"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
-	avamath "github.com/ava-labs/avalanchego/utils/math"
 	platformapi "github.com/ava-labs/avalanchego/vms/platformvm/api"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp/payload"
 	"github.com/ava-labs/subnet-evm/accounts/abi/bind"
+	"github.com/ava-labs/subnet-evm/interfaces"
+	"github.com/ava-labs/subnet-evm/precompile/contracts/ibc"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	tendermint "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
-	avalanche "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
+	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
+	"github.com/ethereum/go-ethereum/common"
 
 	ibccontract "github.com/cosmos/relayer/v2/relayer/chains/avalanche/ibc"
 	"github.com/cosmos/relayer/v2/relayer/provider"
@@ -62,189 +54,94 @@ func (a AvalancheProvider) QueryIBCHeader(ctx context.Context, h int64) (provide
 		return nil, err
 	}
 
-	validatorSet, vdrs, pChainHeight, err := a.avalancheValidatorSet(ctx, ethHeader.Number.Uint64())
+	// get sorted warp validators and pChainHeight
+	warpValidators, _, pChainHeight, err := a.warpValidatorSet(ctx, ethHeader.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
 
-	signedStorageRoot, signersBits, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
+	// convert warp.Validator set to avalanche.Validator set
+	vdrs, err := avaclient.ConvertWarpVldrsToValidators(warpValidators)
 	if err != nil {
 		return nil, err
 	}
 
-	a.log.Info("signersBits", zap.Binary("signersBits", signersBits))
-	signedValidatorSet, signersBitsVals, err := a.avalancheBlsSignature(ctx, validatorSet)
+	// marshal validators to bytes
+	validatorSetBz, err := avaclient.MarshalValidators(vdrs)
 	if err != nil {
 		return nil, err
 	}
 
-	a.log.Info("signersBitsVals", zap.Binary("signersBitsVals", signersBitsVals))
-	// todo check signature here
-	// avaVdrs, totalWeigth, err := ValidateValidatorSet(context.Background(), vdrs)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = avaclient.ValidateValidators(vdrs, validatorSetBz)
+	if err != nil {
+		return nil, err
+	}
 
-	// err = avalanche.VerifyBls(
-	// 	signersBits, // signersInput indices
-	// 	signedStorageRoot,
-	// 	ethHeader.Root.Bytes(),
-	// 	avaVdrs,
-	// 	totalWeigth,
-	// 	1,
-	// 	5,
-	// )
-	// if err != nil {
-	// 	return nil, err
-	// }
+	signedValidatorSet, signersBitsVals, err := a.avalancheBlsSignature(ctx, validatorSetBz)
+	if err != nil {
+		return nil, err
+	}
+
+	signedStorageRoot, signersBitsStorageRoot, err := a.avalancheBlsSignature(ctx, ethHeader.Root.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	packedSignersInput, err := avaclient.PackSignersInput(signersBitsVals, signersBitsStorageRoot)
+	if err != nil {
+		return nil, err
+	}
 
 	return AvalancheIBCHeader{
 		EthHeader:          ethHeader,
 		SignedStorageRoot:  signedStorageRoot,
 		SignedValidatorSet: signedValidatorSet,
-		ValidatorSet:       validatorSet,
+		ValidatorSet:       validatorSetBz,
 		Vdrs:               vdrs,
-		SignersInput:       signersBits,
+		SignersInput:       packedSignersInput,
 		PChainHeight:       pChainHeight,
 	}, nil
-
 }
 
-func ValidateValidatorSet(
-	ctx context.Context,
-	vdrSet []*avalanche.Validator,
-) ([]*warp.Validator, uint64, error) {
-	var (
-		vdrs        = make([]*warp.Validator, len(vdrSet))
-		totalWeight uint64
-		err         error
-	)
-	for i, vdr := range vdrSet {
-		totalWeight, err = avamath.Add64(totalWeight, vdr.Weight)
-		if err != nil {
-			return nil, 0, fmt.Errorf("%w: %v", warp.ErrWeightOverflow, err)
-		}
-
-		if vdr.PublicKeyByte == nil {
-			continue
-		}
-
-		publicKey, err := bls.PublicKeyFromCompressedBytes(vdr.PublicKeyByte)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		warpVdr := &warp.Validator{
-			PublicKey:      publicKey,
-			PublicKeyBytes: vdr.PublicKeyByte,
-			Weight:         vdr.Weight,
-			NodeIDs:        SetNodeIDs(vdr.NodeIDs),
-		}
-		vdrs[i] = warpVdr
-	}
-	utils.Sort(vdrs)
-	return vdrs, totalWeight, nil
-}
-
-func SetNodeIDs(data [][]byte) []ids.NodeID {
-	var (
-		nodeIDs = make([]ids.NodeID, len(data))
-	)
-	for i, b := range data {
-		if len(b) > len(nodeIDs[i]) {
-			b = b[len(b)-len(nodeIDs[i]):]
-		}
-		copy(nodeIDs[i][len(nodeIDs[i])-len(b):], b)
-	}
-	return nodeIDs
-}
-
-func (a AvalancheProvider) avalancheValidatorSet(ctx context.Context, evmHeight uint64) ([]byte, []*avalanche.Validator, uint64, error) {
+// warpValidatorSet returns the validator set of [subnetID] at [evmHeight] in a canonical ordering.
+func (a AvalancheProvider) warpValidatorSet(ctx context.Context, evmHeight uint64) ([]*warp.Validator, uint64, uint64, error) {
 	// query P-Chain block number by EVM height
 	pChainHeight, err := a.ibcClient.GetPChainHeight(ctx, evmHeight)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, 0, 0, err
 	}
 
 	// query P-Chain validators at specific height
-	vdrSet, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, platformapi.Height(pChainHeight))
+	vdrSetUnsorted, err := a.pClient.GetValidatorsAt(ctx, a.subnetID, platformapi.Height(pChainHeight))
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, 0, 0, err
 	}
 
-	vdrs := make(map[string]*Validator, len(vdrSet))
-	for _, vdr := range vdrSet {
-		if vdr.PublicKey == nil {
-			continue
-		}
-
-		pkBytes := bls.PublicKeyToCompressedBytes(vdr.PublicKey)
-		uniqueVdr, ok := vdrs[string(pkBytes)]
-		if !ok {
-			uniqueVdr = &Validator{
-				PublicKey:      vdr.PublicKey,
-				PublicKeyBytes: pkBytes,
-			}
-		}
-
-		uniqueVdr.Weight += vdr.Weight // Impossible to overflow here
-		uniqueVdr.NodeIDs = append(uniqueVdr.NodeIDs, vdr.NodeID)
-
-		vdrs[string(pkBytes)] = uniqueVdr
-	}
-	// Sort validators by public key
-	vdrList := maps.Values(vdrs)
-	utils.Sort(vdrList)
-
-	var avaVldrs []*avalanche.Validator
-	for _, v := range vdrList {
-		avaVldrs = append(avaVldrs, &avalanche.Validator{
-			PublicKeyByte: v.PublicKeyBytes,
-			Weight:        v.Weight,
-			NodeIDs:       [][]byte{v.NodeIDs[0].Bytes()},
-			// EndTime:       time.Time{},
-		})
+	vdrSet, totalWeight, err := warp.FlattenValidatorSet(vdrSetUnsorted)
+	if err != nil {
+		return nil, 0, 0, err
 	}
 
-	// Avalanche validator set in binary format
-	var avaVldrsBz []byte
-	for _, vldr := range avaVldrs {
-		data, err := vldr.Marshal()
-		if err != nil {
-			return nil, nil, 0, err
-		}
-		avaVldrsBz = append(avaVldrsBz, data...)
-	}
-
-	return avaVldrsBz, avaVldrs, pChainHeight, nil
+	return vdrSet, totalWeight, pChainHeight, nil
 }
 
+// avalancheBlsSignature returns the BLS signature of [payloadData] using the Avalanche network.
 func (a AvalancheProvider) avalancheBlsSignature(ctx context.Context, payloadData []byte) ([bls.SignatureLen]byte, []byte, error) {
-	addressedPayload, err := payload.NewAddressedCall(
-		[]byte{},
-		payloadData,
-	)
+	unsignedMessage, err := avaclient.CreateUnsignedMessage(a.PCfg.NetworkID, a.blockchainID, payloadData)
 	if err != nil {
-		return [96]byte{}, nil, err
-	}
-	unsignedMessage, err := warp.NewUnsignedMessage(a.PCfg.NetworkID, a.blockchainID, addressedPayload.Bytes())
-	if err != nil {
-		return [96]byte{}, nil, err
-	}
-	signedWarpMessageBytes, err := a.ibcClient.GetMessageAggregateSignature(ctx, unsignedMessage.ID(), 3, a.PCfg.SubnetID)
-	if err != nil {
-		return [96]byte{}, nil, err
+		return [bls.SignatureLen]byte{}, nil, err
 	}
 
-	warpMsg, err := warp.ParseMessage(signedWarpMessageBytes)
+	signedWarpMessageBytes, err := a.ibcClient.GetMessageAggregateSignature(ctx, unsignedMessage.ID(), 60, a.PCfg.SubnetID)
 	if err != nil {
-		return [96]byte{}, nil, err
+		return [bls.SignatureLen]byte{}, nil, err
 	}
 
-	bitsetSignature, ok := warpMsg.Signature.(*warp.BitSetSignature)
-	if !ok {
-		return [96]byte{}, nil, errors.New("unable to cast warp signature to BitSetSignature")
+	bitsetSignature, err := avaclient.ParseBitSetSignature(signedWarpMessageBytes)
+	if err != nil {
+		return [bls.SignatureLen]byte{}, nil, err
 	}
+
 	return bitsetSignature.Signature, bitsetSignature.Signers, nil
 }
 

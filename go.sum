@@ -1353,8 +1353,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250130095017-1442e862a739 h1:3LnNAP/AUxrV3eM3I5cTp+W+KaMWJuqV4RLrOJJ+VOw=
-github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250130095017-1442e862a739/go.mod h1:a/xxONXhnuSmLTTesCdW152F/rU8B4b6LzRVXxcMquM=
+github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250205145206-d878bb4678cb h1:CL9RTqS9jR+hKztQ77Yp54eOt9lEcCSNEcHp13l4MRo=
+github.com/ConsiderItDone/ibc-go-strangelove-private/v8 v8.3.1-0.20250205145206-d878bb4678cb/go.mod h1:a/xxONXhnuSmLTTesCdW152F/rU8B4b6LzRVXxcMquM=
 github.com/ConsiderItDone/subnet-evm-private v0.0.0-20241209133549-33e2e99a0a89 h1:vKf06bdk3K3ho5Ca9f7R0uQJarI39y6IQxs2X43BzZo=
 github.com/ConsiderItDone/subnet-evm-private v0.0.0-20241209133549-33e2e99a0a89/go.mod h1:d/qMBG66OqPCEnj2jjjy/Om4KkfE8AaKv85Q2IwDDww=
 github.com/DataDog/datadog-go v3.2.0+incompatible h1:qSG2N4FghB1He/r2mFrWKCaL7dXCilEuNEeAn20fdD4=
