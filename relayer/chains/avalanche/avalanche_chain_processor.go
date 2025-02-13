@@ -75,6 +75,8 @@ type AvalancheChainProcessor struct {
 
 	// map of channel ID to connection ID
 	channelConnections map[string]string
+
+	blockTries map[int64]int
 }
 
 func NewAvalancheChainProcessor(log *zap.Logger, provider *AvalancheProvider) *AvalancheChainProcessor {
@@ -86,6 +88,7 @@ func NewAvalancheChainProcessor(log *zap.Logger, provider *AvalancheProvider) *A
 		channelStateCache:    make(processor.ChannelStateCache),
 		connectionClients:    make(map[string]string),
 		channelConnections:   make(map[string]string),
+		blockTries:           make(map[int64]int),
 	}
 }
 
@@ -294,6 +297,22 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 
 	chainID := acp.chainProvider.ChainId()
 
+	if persistence.latestQueriedBlock != 0 {
+		if ibcHeader, err := acp.chainProvider.QueryIBCHeader(context.Background(), persistence.latestQueriedBlock); err == nil {
+			if avaHeader, ok := any(ibcHeader).(AvalancheIBCHeader); ok {
+				latestHeader = avaHeader
+				ibcHeaderCache[uint64(persistence.latestQueriedBlock)] = avaHeader
+			}
+		}
+
+		if blockRes, err := acp.chainProvider.ethClient.BlockByNumber(context.Background(), big.NewInt(persistence.latestQueriedBlock)); err == nil {
+			acp.latestBlock = provider.LatestBlock{
+				Height: uint64(persistence.latestQueriedBlock),
+				Time:   time.Unix(int64(blockRes.Time()), 0),
+			}
+		}
+	}
+
 	for i := persistence.latestQueriedBlock + 1; i <= persistence.latestHeight; i++ {
 		var eg errgroup.Group
 		var blockRes *types.Block
@@ -398,18 +417,32 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 		newLatestQueriedBlock = i
 	}
 
-	if newLatestQueriedBlock == persistence.latestQueriedBlock /*&& !firstTimeInSync */ {
-		return nil
+	stuck := false
+	tries, ok := acp.blockTries[persistence.latestQueriedBlock]
+	if ok {
+		if tries+1 >= blockMaxRetries {
+			stuck = true
+			tries = 0
+		}
+	}
+	acp.blockTries[persistence.latestQueriedBlock] = tries + 1
+
+	if newLatestQueriedBlock == persistence.latestQueriedBlock && !acp.inSync {
+		if !stuck {
+			return nil
+		}
 	}
 
 	if !ppChanged {
-		if firstTimeInSync {
+		if firstTimeInSync || !acp.inSync {
 			for _, pp := range acp.pathProcessors {
 				pp.ProcessBacklogIfReady()
 			}
 		}
 
-		return nil
+		if !stuck {
+			return nil
+		}
 	}
 
 	for _, pp := range acp.pathProcessors {
