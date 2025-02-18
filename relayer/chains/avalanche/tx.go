@@ -866,16 +866,11 @@ func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info pro
 		return nil, err
 	}
 
-	packetData, _ := json.Marshal(FungibleTokenPacketData{
-		Denom:    amount.Denom,
-		Amount:   amount.Amount.String(),
-		Sender:   a.txAuth.From.Hex(),
-		Receiver: dstAddr,
-	})
-
 	msg, err := abi.Pack(
 		"transfer",
-		big.NewInt(0),
+		amount.Denom,
+		amount.Amount.BigInt(),
+		[]byte(dstAddr),
 		info.SourcePort,
 		info.SourceChannel,
 		ics20banktransferapp.Height{
@@ -883,7 +878,7 @@ func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info pro
 			RevisionNumber: big.NewInt(int64(info.TimeoutHeight.RevisionNumber)),
 		},
 		big.NewInt(int64(info.TimeoutTimestamp)),
-		packetData,
+		[32]byte{},
 	)
 	if err != nil {
 		return nil, err
