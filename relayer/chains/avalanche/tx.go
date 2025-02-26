@@ -951,7 +951,7 @@ func (a AvalancheProvider) MsgAcknowledgement(msgRecvPacket provider.PacketInfo,
 
 func (a AvalancheProvider) MsgTimeout(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
 	// TODO implement me
-	panic("implement me")
+	return nil, nil
 }
 
 func (a AvalancheProvider) MsgTimeoutOnClose(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
