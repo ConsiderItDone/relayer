@@ -956,7 +956,7 @@ func (a AvalancheProvider) MsgTimeout(msgTransfer provider.PacketInfo, proofUnre
 
 func (a AvalancheProvider) MsgTimeoutOnClose(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
 	// TODO implement me
-	panic("implement me")
+	return nil, nil
 }
 
 func (a AvalancheProvider) CommitmentPrefix() commitmenttypes.MerklePrefix {
