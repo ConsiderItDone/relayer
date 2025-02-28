@@ -56,7 +56,7 @@ func (a AvalancheProvider) SendMessage(ctx context.Context, msg provider.Relayer
 func (a AvalancheProvider) broadcastTx(
 	ctx context.Context, // context for tx broadcast
 	signedTx *evmtypes.Transaction,
-	asyncCtx context.Context, // context for async wait for block inclusion after successful tx broadcast
+	asyncCtx context.Context,                                  // context for async wait for block inclusion after successful tx broadcast
 	asyncCallbacks []func(*provider.RelayerTxResponse, error), // callback for success/fail of the wait for block inclusion
 ) error {
 	err := a.ethClient.SendTransaction(ctx, signedTx)
@@ -210,6 +210,12 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 			zap.Error(err),
 		)
 		if err != nil {
+			a.log.Info("Avalanche tx broadcast failed",
+				zap.Binary("signedTx.Data()", signedTx.Data()),
+				zap.Uint64("signedTx.Nonce()", signedTx.Nonce()),
+				zap.String("(signedTx.ChainId()", signedTx.ChainId().String()),
+				zap.Uint64("(signedTx.Size()", signedTx.Size()),
+			)
 			return err
 		}
 	}
