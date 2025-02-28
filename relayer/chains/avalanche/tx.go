@@ -210,6 +210,7 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 			zap.Error(err),
 		)
 		if err != nil {
+			r, s, v := signedTx.RawSignatureValues()
 			msgBytes, err2 := msgs[i].MsgBytes()
 			if err2 != nil {
 				a.log.Error("Failed to get msg bytes", zap.Error(err))
@@ -221,6 +222,12 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 				zap.Uint64("signedTx.Nonce()", signedTx.Nonce()),
 				zap.String("(signedTx.ChainId()", signedTx.ChainId().String()),
 				zap.Uint64("(signedTx.Size()", signedTx.Size()),
+				zap.String("r.String()", r.String()),
+				zap.String("r.Bytes()", hexutil.Encode(r.Bytes())),
+				zap.String("s.String()", s.String()),
+				zap.String("s.Bytes()", hexutil.Encode(s.Bytes())),
+				zap.String("v.String()", v.String()),
+				zap.String("v.Bytes()", hexutil.Encode(v.Bytes())),
 			)
 			return err
 		}
