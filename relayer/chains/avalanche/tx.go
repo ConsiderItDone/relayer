@@ -210,6 +210,12 @@ func (a AvalancheProvider) SendMessagesToMempool(ctx context.Context, msgs []pro
 			zap.Error(err),
 		)
 		if err != nil {
+			a.log.Info("Avalanche tx broadcast failed",
+				zap.Binary("signedTx.Data()", signedTx.Data()),
+				zap.Uint64("signedTx.Nonce()", signedTx.Nonce()),
+				zap.String("(signedTx.ChainId()", signedTx.ChainId().String()),
+				zap.Uint64("(signedTx.Size()", signedTx.Size()),
+			)
 			return err
 		}
 	}
