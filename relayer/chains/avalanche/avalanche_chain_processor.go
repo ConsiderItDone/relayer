@@ -41,7 +41,7 @@ func (l latestClientState) update(ctx context.Context, clientInfo clientInfo, ac
 	}
 
 	// TODO: don't hardcode
-	tp := time.Hour * 2
+	tp := time.Hour * 2000000
 	clientState := clientInfo.ClientState(tp)
 
 	// update latest if no existing state or provided consensus height is newer
@@ -369,10 +369,10 @@ func (acp *AvalancheChainProcessor) queryCycle(ctx context.Context, persistence 
 		ibcHeaderCache[heightUint64] = latestHeader
 		ppChanged = true
 
-		//blockMsgs := acp.ibcMessagesFromBlockEvents(blockRes.Transactions())
-		//for _, m := range blockMsgs {
+		// blockMsgs := acp.ibcMessagesFromBlockEvents(blockRes.Transactions())
+		// for _, m := range blockMsgs {
 		//	acp.handleMessage(m, ibcMessagesCache)
-		//}
+		// }
 
 		for _, receipt := range receipts {
 			if receipt.Status != types.ReceiptStatusSuccessful {
