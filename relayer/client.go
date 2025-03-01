@@ -10,9 +10,10 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // CreateClients creates clients for src on dst and dst on src if the client ids are unspecified.
@@ -64,8 +65,7 @@ func (c *Chain) CreateClients(ctx context.Context,
 	}
 
 	// overriding the unbonding period should only be possible when creating single clients at a time (CreateClient)
-	var overrideUnbondingPeriod = time.Duration(0)
-
+	var overrideUnbondingPeriod = 20000 * time.Hour // 20000 Hours = 833 Days
 	var clientSrc, clientDst string
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
@@ -196,10 +196,10 @@ func CreateClient(
 		// Check if an identical light client already exists on the src chain which matches the
 		// proposed new client state from dst.
 		// TODO
-		//clientID, err = findMatchingClient(ctx, src, dst, clientState)
-		//if err != nil {
+		// clientID, err = findMatchingClient(ctx, src, dst, clientState)
+		// if err != nil {
 		//	return "", fmt.Errorf("failed to find a matching client for the new client state: %w", err)
-		//}
+		// }
 	}
 
 	if clientID != "" && !override {
