@@ -10,8 +10,9 @@ import (
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 var _ zapcore.ObjectMarshaler = packetIBCMessage{}
@@ -66,6 +67,7 @@ func (msg packetIBCMessage) assemble(
 		packetProof = src.chainProvider.PacketAcknowledgement
 		assembleMessage = dst.chainProvider.MsgAcknowledgement
 	case chantypes.EventTypeTimeoutPacket:
+		fmt.Println("chantypes.EventTypeTimeoutPacket")
 		if msg.info.ChannelOrder == chantypes.ORDERED.String() {
 			packetProof = src.chainProvider.NextSeqRecv
 		} else {

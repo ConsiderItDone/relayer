@@ -44,12 +44,13 @@ import (
 	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	localhost "github.com/cosmos/ibc-go/v8/modules/light-clients/09-localhost"
 	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
-	strideicqtypes "github.com/cosmos/relayer/v2/relayer/chains/cosmos/stride"
-	"github.com/cosmos/relayer/v2/relayer/ethermint"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	strideicqtypes "github.com/cosmos/relayer/v2/relayer/chains/cosmos/stride"
+	"github.com/cosmos/relayer/v2/relayer/ethermint"
+	"github.com/cosmos/relayer/v2/relayer/provider"
 
 	"github.com/cosmos/relayer/v2/relayer/chains/avalanche"
 )
@@ -326,9 +327,9 @@ func (cc *CosmosProvider) SendMsgsWith(ctx context.Context, msgs []sdk.Msg, memo
 	}
 
 	err = func() error {
-		//done := cc.SetSDKContext()
+		// done := cc.SetSDKContext()
 		// ensure that we always call done, even in case of an error or panic
-		//defer done()
+		// defer done()
 
 		if err = tx.Sign(ctx, txf, signingKey, txb, false); err != nil {
 			return err
@@ -442,7 +443,7 @@ func (cc *CosmosProvider) waitForTx(
 		cc.log.Error("Failed to wait for block inclusion", zap.Error(err))
 		if len(callbacks) > 0 {
 			for _, cb := range callbacks {
-				//Call each callback in order since waitForTx is already invoked asynchronously
+				// Call each callback in order since waitForTx is already invoked asynchronously
 				cb(nil, err)
 			}
 		}
@@ -470,7 +471,7 @@ func (cc *CosmosProvider) waitForTx(
 		}
 		if len(callbacks) > 0 {
 			for _, cb := range callbacks {
-				//Call each callback in order since waitForTx is already invoked asynchronously
+				// Call each callback in order since waitForTx is already invoked asynchronously
 				cb(nil, err)
 			}
 		}
@@ -480,7 +481,7 @@ func (cc *CosmosProvider) waitForTx(
 
 	if len(callbacks) > 0 {
 		for _, cb := range callbacks {
-			//Call each callback in order since waitForTx is already invoked asynchronously
+			// Call each callback in order since waitForTx is already invoked asynchronously
 			cb(rlyResp, nil)
 		}
 	}
@@ -1341,7 +1342,7 @@ func (cc *CosmosProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader,
 			PchainHeader:      nil,
 			StorageRoot:       nil,
 			SignedStorageRoot: nil,
-			//ValidatorSet:       nil,
+			// ValidatorSet:       nil,
 			SignedValidatorSet: nil,
 			Vdrs:               nil,
 			SignersInput:       nil,
@@ -1429,6 +1430,7 @@ func (cc *CosmosProvider) RelayPacketFromSequence(
 		Height: dsth,
 		Time:   dstTime,
 	}); err != nil {
+		cc.log.Error("CosmosProvider: Failed to validate packet", zap.Error(err))
 		switch err.(type) {
 		case *provider.TimeoutHeightError, *provider.TimeoutTimestampError, *provider.TimeoutOnCloseError:
 			var pp provider.PacketProof
