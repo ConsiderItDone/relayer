@@ -839,7 +839,10 @@ func (a AvalancheProvider) ValidatePacket(msgTransfer provider.PacketInfo, lates
 
 	latestClientTypesHeight := clienttypes.NewHeight(0, latestBlock.Height)
 	if !msgTransfer.TimeoutHeight.IsZero() && latestClientTypesHeight.GTE(msgTransfer.TimeoutHeight) {
-		return provider.NewTimeoutHeightError(latestBlock.Height, msgTransfer.TimeoutHeight.RevisionHeight)
+		// todo: remove override
+		msgTransfer.TimeoutHeight = clienttypes.NewHeight(latestClientTypesHeight.RevisionHeight, latestBlock.Height+200)
+
+		// return provider.NewTimeoutHeightError(latestBlock.Height, msgTransfer.TimeoutHeight.RevisionHeight)
 	}
 	latestTimestamp := uint64(latestBlock.Time.UnixNano())
 	if msgTransfer.TimeoutTimestamp > 0 && latestTimestamp > msgTransfer.TimeoutTimestamp {
