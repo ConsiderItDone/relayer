@@ -10,9 +10,10 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 // CreateClients creates clients for src on dst and dst on src if the client ids are unspecified.
@@ -196,10 +197,10 @@ func CreateClient(
 		// Check if an identical light client already exists on the src chain which matches the
 		// proposed new client state from dst.
 		// TODO
-		//clientID, err = findMatchingClient(ctx, src, dst, clientState)
-		//if err != nil {
+		// clientID, err = findMatchingClient(ctx, src, dst, clientState)
+		// if err != nil {
 		//	return "", fmt.Errorf("failed to find a matching client for the new client state: %w", err)
-		//}
+		// }
 	}
 
 	if clientID != "" && !override {
@@ -380,8 +381,11 @@ func UpdateClients(
 ) error {
 	srch, dsth, err := QueryLatestHeights(ctx, src, dst)
 	if err != nil {
+		src.log.Error("Failed to query latest heights", zap.Error(err))
 		return err
 	}
+	src.log.Info("Latest heights", zap.Int64("src", srch))
+	dst.log.Info("Latest heights", zap.Int64("dst", dsth))
 
 	var srcMsgUpdateClient, dstMsgUpdateClient provider.RelayerMessage
 	eg, egCtx := errgroup.WithContext(ctx)
