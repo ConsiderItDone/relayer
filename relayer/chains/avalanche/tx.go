@@ -871,12 +871,20 @@ func (a AvalancheProvider) PacketAcknowledgement(ctx context.Context, msgRecvPac
 
 func (a AvalancheProvider) PacketReceipt(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
 	// TODO implement me
-	panic("implement me")
+	a.log.Error("PacketReceipt not implemented",
+		zap.String("msgTransfer", fmt.Sprintf("%+v", msgTransfer)),
+		zap.Uint64("height", height),
+	)
+	return provider.PacketProof{}, nil
 }
 
 func (a AvalancheProvider) NextSeqRecv(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
 	// TODO implement me
-	panic("implement me")
+	a.log.Error("NextSeqRecv not implemented",
+		zap.String("msgTransfer", fmt.Sprintf("%+v", msgTransfer)),
+		zap.Uint64("height", height),
+	)
+	return provider.PacketProof{}, nil
 }
 
 func (a AvalancheProvider) MsgTransfer(dstAddr string, amount sdk.Coin, info provider.PacketInfo) (provider.RelayerMessage, error) {
@@ -970,11 +978,19 @@ func (a AvalancheProvider) MsgAcknowledgement(msgRecvPacket provider.PacketInfo,
 
 func (a AvalancheProvider) MsgTimeout(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
 	// TODO implement me
+	a.log.Error("MsgTimeout not implemented",
+		zap.String("msgTransfer", fmt.Sprintf("%+v", msgTransfer)),
+		zap.String("proofUnreceived", fmt.Sprintf("%+v", proofUnreceived)),
+	)
 	return nil, nil
 }
 
 func (a AvalancheProvider) MsgTimeoutOnClose(msgTransfer provider.PacketInfo, proofUnreceived provider.PacketProof) (provider.RelayerMessage, error) {
 	// TODO implement me
+	a.log.Error("MsgTimeoutOnClose not implemented",
+		zap.String("msgTransfer", fmt.Sprintf("%+v", msgTransfer)),
+		zap.String("proofUnreceived", fmt.Sprintf("%+v", proofUnreceived)),
+	)
 	return nil, nil
 }
 
