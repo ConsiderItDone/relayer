@@ -316,13 +316,13 @@ func (mp *messageProcessor) assembleMsgUpdateClient(ctx context.Context, src, ds
 		dst.clientTrustedState.IBCHeader,
 	)
 	// avalanche
-	if src.info.ChainID == "99999" {
+	if src.info.ChainID == "66551123" {
 		avaHeader := msgUpdateClientHeader.(*avaclient.Header)
 		mp.log.Info("constructed MsgUpdateClientHeader from avalanche for cosmos",
 			zap.String("subnet_header", avaHeader.SubnetHeader.Height.String()),
 		)
 	}
-	if src.info.ChainID == "ibcgo" {
+	if src.info.ChainID == "ibc-1" {
 		tmHeader := msgUpdateClientHeader.(*tmclient.Header)
 		mp.log.Info("constructed MsgUpdateClientHeader from cosmos for avalanche",
 			zap.Int64("height", tmHeader.Header.Height),
