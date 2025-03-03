@@ -823,6 +823,8 @@ func (cc *CosmosProvider) MsgTransfer(
 }
 
 func (cc *CosmosProvider) ValidatePacket(msgTransfer provider.PacketInfo, latest provider.LatestBlock) error {
+
+	cc.log.Info("Validating packet", zap.String("chain_id", cc.PCfg.ChainID))
 	if msgTransfer.Sequence == 0 {
 		return errors.New("refusing to relay packet with sequence: 0")
 	}

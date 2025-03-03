@@ -823,6 +823,7 @@ func (a AvalancheProvider) MsgSubmitMisbehaviour(clientID string, misbehaviour i
 }
 
 func (a AvalancheProvider) ValidatePacket(msgTransfer provider.PacketInfo, latestBlock provider.LatestBlock) error {
+	a.log.Info("Validating packet", zap.String("chain_id", a.PCfg.ChainID))
 	if msgTransfer.Sequence == 0 {
 		return errors.New("refusing to relay packet with sequence: 0")
 	}
@@ -838,7 +839,10 @@ func (a AvalancheProvider) ValidatePacket(msgTransfer provider.PacketInfo, lates
 
 	latestClientTypesHeight := clienttypes.NewHeight(0, latestBlock.Height)
 	if !msgTransfer.TimeoutHeight.IsZero() && latestClientTypesHeight.GTE(msgTransfer.TimeoutHeight) {
-		return provider.NewTimeoutHeightError(latestBlock.Height, msgTransfer.TimeoutHeight.RevisionHeight)
+		// todo: remove override
+		msgTransfer.TimeoutHeight = clienttypes.NewHeight(latestClientTypesHeight.RevisionHeight, latestBlock.Height+200)
+
+		// return provider.NewTimeoutHeightError(latestBlock.Height, msgTransfer.TimeoutHeight.RevisionHeight)
 	}
 	latestTimestamp := uint64(latestBlock.Time.UnixNano())
 	if msgTransfer.TimeoutTimestamp > 0 && latestTimestamp > msgTransfer.TimeoutTimestamp {
