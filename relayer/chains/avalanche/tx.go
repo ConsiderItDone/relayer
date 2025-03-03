@@ -874,20 +874,13 @@ func (a AvalancheProvider) PacketAcknowledgement(ctx context.Context, msgRecvPac
 }
 
 func (a AvalancheProvider) PacketReceipt(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
-	a.log.Info("AvalancheProvider PacketReceipt")
-	ack, err := a.ibcContract.QueryPacketCommitment(
-		&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(height)},
-		msgTransfer.DestPort,
-		msgTransfer.DestChannel,
-		new(big.Int).SetUint64(msgTransfer.Sequence),
+	// TODO implement me
+	a.log.Error("PacketReceipt not implemented",
+		zap.String("msgTransfer", fmt.Sprintf("%+v", msgTransfer)),
+		zap.Uint64("height", height),
 	)
-	return provider.PacketProof{
-		Proof: ack,
-		ProofHeight: clienttypes.Height{
-			RevisionNumber: 0,
-			RevisionHeight: height,
-		},
-	}, err
+	return provider.PacketProof{}, nil
+
 }
 
 func (a AvalancheProvider) NextSeqRecv(ctx context.Context, msgTransfer provider.PacketInfo, height uint64) (provider.PacketProof, error) {
