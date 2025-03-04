@@ -135,7 +135,7 @@ func (a *AvalancheProvider) Init(ctx context.Context) error {
 	}
 
 	a.txAuth, err = bind.NewKeyedTransactorWithChainID(ethPrivKey, chainId)
-	a.txAuth.GasLimit = 1000000
+	a.txAuth.GasLimit = 10000000
 	if err != nil {
 		return err
 	}

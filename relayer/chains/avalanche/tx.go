@@ -280,7 +280,7 @@ func (a AvalancheProvider) createDynamicTx(opts *bind.TransactOpts, contract *co
 	if gasFeeCap == nil {
 		gasFeeCap = new(big.Int).Add(
 			gasTipCap,
-			new(big.Int).Mul(head.BaseFee, big.NewInt(2)),
+			new(big.Int).Mul(head.BaseFee, big.NewInt(4)),
 		)
 	}
 	if gasFeeCap.Cmp(gasTipCap) < 0 {
@@ -397,6 +397,7 @@ func (a AvalancheProvider) signTx(msg provider.RelayerMessage) (*evmtypes.Transa
 	if head, errHead := a.ethClient.HeaderByNumber(ensureContext(a.txAuth.Context), nil); errHead != nil {
 		return nil, errHead
 	} else if head.BaseFee != nil {
+		a.log.Info("Creating dynamic fee transaction")
 		rawTx, err = a.createDynamicTx(a.txAuth, &contractAddress, input, head)
 	} else {
 		// Chain is not London ready -> use legacy transaction
