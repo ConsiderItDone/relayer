@@ -13,6 +13,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	avaclient "github.com/cosmos/ibc-go/v8/modules/light-clients/14-avalanche"
+
 	"github.com/cosmos/relayer/v2/relayer/provider"
 
 	"go.uber.org/zap"
@@ -105,9 +106,7 @@ func (mp *messageProcessor) processMessages(
 	// Localhost IBC does not permit client updates
 	if !isLocalhostClient(src.clientState.ClientID, dst.clientState.ClientID) {
 		var err error
-		needsClientUpdate = false
-		// TODO: uncomment next line
-		// needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
+		needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
 		if err != nil {
 			return err
 		}
@@ -142,7 +141,7 @@ func (mp *messageProcessor) shouldUpdateClientNow(ctx context.Context, src, dst 
 		h, err := src.chainProvider.QueryIBCHeader(ctx, int64(dst.clientState.ConsensusHeight.RevisionHeight))
 		if err != nil {
 			// TODO
-			//return false, nil
+			// return false, nil
 			return false, fmt.Errorf("failed to get header height: %w", err)
 		}
 		consensusHeightTime = time.Unix(0, int64(h.ConsensusState().GetTimestamp()))
@@ -490,7 +489,7 @@ func (mp *messageProcessor) sendBatchMessages(
 	}
 	callbacks := []func(rtr *provider.RelayerTxResponse, err error){callback}
 
-	//During testing, this adds a callback so our test case can inspect the TX results
+	// During testing, this adds a callback so our test case can inspect the TX results
 	if PathProcMessageCollector != nil {
 		testCallback := func(rtr *provider.RelayerTxResponse, err error) {
 			msgResult := &PathProcessorMessageResp{
@@ -577,7 +576,7 @@ func (mp *messageProcessor) sendSingleMessage(
 
 	callbacks = append(callbacks, callback)
 
-	//During testing, this adds a callback so our test case can inspect the TX results
+	// During testing, this adds a callback so our test case can inspect the TX results
 	if PathProcMessageCollector != nil {
 		testCallback := func(rtr *provider.RelayerTxResponse, err error) {
 			msgResult := &PathProcessorMessageResp{
