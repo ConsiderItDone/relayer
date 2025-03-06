@@ -1,9 +1,11 @@
-FROM --platform=$BUILDPLATFORM golang:1.21-alpine3.17 AS build-env
+FROM --platform=$BUILDPLATFORM golang:1.22-alpine3.20 AS build-env
 
 RUN apk add --update --no-cache curl make git libc-dev bash gcc linux-headers eudev-dev
 
 ARG TARGETARCH
 ARG BUILDARCH
+ARG GITHUB_USER=$GITHUB_USER
+ARG GITHUB_PASS=$GITHUB_PASS
 
 RUN if [ "${TARGETARCH}" = "arm64" ] && [ "${BUILDARCH}" != "arm64" ]; then \
     wget -c https://musl.cc/aarch64-linux-musl-cross.tgz -O - | tar -xzvv --strip-components 1 -C /usr; \
@@ -12,6 +14,8 @@ RUN if [ "${TARGETARCH}" = "arm64" ] && [ "${BUILDARCH}" != "arm64" ]; then \
     fi
 
 ADD . .
+
+RUN echo "machine github.com login $GITHUB_USER password $GITHUB_PASS" > ~/.netrc
 
 RUN if [ "${TARGETARCH}" = "arm64" ] && [ "${BUILDARCH}" != "arm64" ]; then \
     export CC=aarch64-linux-musl-gcc CXX=aarch64-linux-musl-g++;\

@@ -65,8 +65,7 @@ func (c *Chain) CreateClients(ctx context.Context,
 	}
 
 	// overriding the unbonding period should only be possible when creating single clients at a time (CreateClient)
-	var overrideUnbondingPeriod = time.Duration(0)
-
+	var overrideUnbondingPeriod = time.Duration(0) // override should be smaller than unbonding period 504h
 	var clientSrc, clientDst string
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {

@@ -60,6 +60,8 @@ type pathEndRuntime struct {
 
 	finishedProcessing chan messageToTrack
 	retryCount         uint64
+
+	blockRetries map[uint64]int
 }
 
 func newPathEndRuntime(log *zap.Logger, pathEnd PathEnd, metrics *PrometheusMetrics) *pathEndRuntime {
@@ -83,6 +85,7 @@ func newPathEndRuntime(log *zap.Logger, pathEnd PathEnd, metrics *PrometheusMetr
 		clientICQProcessing:  newClientICQProcessingCache(),
 		connSubscribers:      make(map[string][]func(provider.ConnectionInfo)),
 		metrics:              metrics,
+		blockRetries:         make(map[uint64]int),
 	}
 }
 
@@ -545,6 +548,13 @@ func (pathEnd *pathEndRuntime) shouldSendPacketMessage(message packetIBCMessage,
 	}
 
 	if message.info.Height >= pathEndForHeight.latestBlock.Height {
+		tries := pathEnd.blockRetries[message.info.Height]
+		stuck := false
+		if tries > 5 {
+			stuck = true
+			tries = 0
+		}
+		pathEnd.blockRetries[message.info.Height] = tries + 1
 		pathEnd.log.Debug("Waiting to relay packet message until counterparty height has incremented",
 			zap.String("event_type", eventType),
 			zap.Uint64("sequence", sequence),
@@ -552,7 +562,9 @@ func (pathEnd *pathEndRuntime) shouldSendPacketMessage(message packetIBCMessage,
 			zap.Uint64("counterparty_height", counterparty.latestBlock.Height),
 			zap.Inline(k),
 		)
-		return false
+		if !stuck {
+			return false
+		}
 	}
 	if !pathEnd.channelStateCache[k].Open {
 		// channel is not open, do not send
@@ -734,11 +746,20 @@ func (pathEnd *pathEndRuntime) shouldSendChannelMessage(message channelIBCMessag
 	}
 
 	if message.info.Height >= counterparty.latestBlock.Height {
+		tries := pathEnd.blockRetries[message.info.Height]
+		stuck := false
+		if tries > 5 {
+			stuck = true
+			tries = 0
+		}
+		pathEnd.blockRetries[message.info.Height] = tries + 1
 		pathEnd.log.Debug("Waiting to relay channel message until counterparty height has incremented",
 			zap.Inline(channelKey),
 			zap.String("event_type", eventType),
 		)
-		return false
+		if !stuck {
+			return false
+		}
 	}
 	msgProcessCache, ok := pathEnd.channelProcessing[eventType]
 	if !ok {

@@ -1,9 +1,13 @@
-FROM golang:1-alpine3.17 AS build-env
+FROM golang:1.22-alpine3.20 AS build-env
+
+ARG GITHUB_USER=$GITHUB_USER
+ARG GITHUB_PASS=$GITHUB_PASS
 
 RUN apk add --update --no-cache curl make git libc-dev bash gcc linux-headers eudev-dev
 
 ADD . .
 
+RUN echo "machine github.com login $GITHUB_USER password $GITHUB_PASS" > ~/.netrc
 RUN CGO_ENABLED=1 LDFLAGS='-linkmode external -extldflags "-static"' make install
 
 # Use minimal busybox from infra-toolkit image for final scratch image
@@ -41,7 +45,7 @@ RUN ln sh pwd && \
     rm ln rm
 
 # Install chain binaries
-COPY --from=build-env /bin/rly /bin
+COPY --from=build-env /go/bin/rly /bin
 
 # Install trusted CA certificates
 COPY --from=busybox-min /etc/ssl/cert.pem /etc/ssl/cert.pem

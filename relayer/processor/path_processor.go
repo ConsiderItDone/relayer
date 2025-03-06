@@ -7,8 +7,9 @@ import (
 
 	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
+
+	"github.com/cosmos/relayer/v2/relayer/provider"
 )
 
 const (
@@ -444,7 +445,8 @@ func (pp *PathProcessor) Run(ctx context.Context, cancel func()) {
 
 		// process latest message cache state from both pathEnds
 		if err := pp.processLatestMessages(ctx, cancel); err != nil {
-			pp.log.Error("Failed to process latest messages", zap.Error(err))
+			// todo uncomment if needed
+			// pp.log.Error("Failed to process latest messages", zap.Error(err))
 
 			// in case of IBC message send errors, schedule retry after durationErrorRetry
 			if retryTimer != nil {
