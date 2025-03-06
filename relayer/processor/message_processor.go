@@ -106,9 +106,7 @@ func (mp *messageProcessor) processMessages(
 	// Localhost IBC does not permit client updates
 	if !isLocalhostClient(src.clientState.ClientID, dst.clientState.ClientID) {
 		var err error
-		needsClientUpdate = false
-		// TODO: uncomment next line
-		// needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
+		needsClientUpdate, err = mp.shouldUpdateClientNow(ctx, src, dst)
 		if err != nil {
 			return err
 		}
@@ -138,7 +136,6 @@ func isLocalhostClient(srcClientID, dstClientID string) bool {
 // or the configured client update threshold duration has passed.
 func (mp *messageProcessor) shouldUpdateClientNow(ctx context.Context, src, dst *pathEndRuntime) (bool, error) {
 	var consensusHeightTime time.Time
-
 	if dst.clientState.ConsensusTime.IsZero() {
 		h, err := src.chainProvider.QueryIBCHeader(ctx, int64(dst.clientState.ConsensusHeight.RevisionHeight))
 		if err != nil {
